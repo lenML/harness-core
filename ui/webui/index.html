@@ -1,0 +1,802 @@
+<!DOCTYPE html>
+<html data-theme="dark">
+
+<head>
+  <link href="https://cdn.jsdelivr.net/npm/daisyui@5" rel="stylesheet" type="text/css" />
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+  <script type="importmap">
+  {
+    "imports": {
+      "react": "https://esm.sh/react@19.2.4",
+      "react/jsx-runtime": "https://esm.sh/react@19.2.4/jsx-runtime",
+      "react-dom/client": "https://esm.sh/react-dom@19.2.4/client",
+      "lucide-react": "https://esm.sh/lucide-react?external=react",
+      "zustand": "https://esm.sh/zustand?external=react",
+      "marked": "https://esm.sh/marked",
+      "snabbdom": "https://esm.sh/snabbdom@3.6.0"
+    }
+  }
+  </script>
+  <script type="module" src="https://esm.sh/tsx"></script>
+  <style>
+    @keyframes blink {
+
+      0%,
+      100% {
+        opacity: 1
+      }
+
+      50% {
+        opacity: 0
+      }
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(6px)
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0)
+      }
+    }
+
+    @keyframes dotPulse {
+
+      0%,
+      100% {
+        transform: scale(1);
+        opacity: .7
+      }
+
+      50% {
+        transform: scale(1.4);
+        opacity: 1
+      }
+    }
+
+    @keyframes modalIn {
+      from {
+        opacity: 0;
+        transform: scale(.96)
+      }
+
+      to {
+        opacity: 1;
+        transform: scale(1)
+      }
+    }
+
+    .anim-fade {
+      animation: fadeIn .2s ease
+    }
+
+    .anim-modal {
+      animation: modalIn .2s ease
+    }
+
+    .anim-blink {
+      animation: blink .8s step-end infinite
+    }
+
+    .anim-spin {
+      animation: spin 1s linear infinite
+    }
+
+    .anim-dot {
+      animation: dotPulse 1.2s ease-in-out infinite
+    }
+
+    .size-compact {
+      font-size: 12px
+    }
+
+    .size-default {
+      font-size: 14px
+    }
+
+    .size-comfort {
+      font-size: 16px
+    }
+
+    .size-large {
+      font-size: 18px
+    }
+
+    ::-webkit-scrollbar {
+      width: 5px
+    }
+
+    ::-webkit-scrollbar-track {
+      background: transparent
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: oklch(var(--bc)/.2);
+      border-radius: 3px
+    }
+
+    .md-body h1 {
+      font-size: 1.4em;
+      font-weight: 700;
+      margin: .6em 0 .3em
+    }
+
+    .md-body h2 {
+      font-size: 1.2em;
+      font-weight: 700;
+      margin: .5em 0 .25em
+    }
+
+    .md-body h3 {
+      font-size: 1.05em;
+      font-weight: 600;
+      margin: .4em 0 .2em
+    }
+
+    .md-body p {
+      margin: .4em 0;
+      line-height: 1.65
+    }
+
+    .md-body ul,
+    .md-body ol {
+      padding-left: 1.5em;
+      margin: .4em 0
+    }
+
+    .md-body li {
+      margin: .15em 0
+    }
+
+    .md-body code {
+      padding: 1px 5px;
+      border-radius: 3px;
+      font-size: .88em;
+      font-family: monospace;
+      background: oklch(var(--b2))
+    }
+
+    .md-body pre {
+      background: oklch(.13 0 0);
+      border: 1px solid oklch(var(--b3));
+      border-radius: 6px;
+      padding: 10px 14px;
+      overflow-x: auto;
+      margin: .5em 0
+    }
+
+    .md-body pre code {
+      background: none;
+      padding: 0
+    }
+
+    .md-body blockquote {
+      border-left: 3px solid oklch(var(--p));
+      padding-left: 12px;
+      opacity: .8;
+      margin: .5em 0
+    }
+
+    .md-body a {
+      color: oklch(var(--p));
+      text-decoration: none
+    }
+
+    .md-body a:hover {
+      text-decoration: underline
+    }
+
+    .md-body table {
+      border-collapse: collapse;
+      margin: .5em 0;
+      width: 100%
+    }
+
+    .md-body th,
+    .md-body td {
+      border: 1px solid oklch(var(--b3));
+      padding: 6px 10px;
+      text-align: left
+    }
+
+    .md-body th {
+      font-weight: 600
+    }
+
+    .md-body hr {
+      border: none;
+      border-top: 1px solid oklch(var(--b3));
+      margin: 1em 0
+    }
+
+    .md-body img {
+      max-width: 100%;
+      border-radius: 6px
+    }
+
+    .tool-args {
+      background: oklch(.13 0 0);
+      border: 1px solid oklch(var(--b3));
+      border-radius: 4px;
+      padding: 6px 8px;
+      font-family: monospace;
+      font-size: 10.5px;
+      white-space: pre-wrap;
+      word-break: break-all;
+      max-height: 160px;
+      overflow-y: auto
+    }
+  </style>
+</head>
+
+<body class="size-default">
+  <div id="root" class="h-screen"></div>
+  <script type="text/babel">
+    import * as React from "react"; window.React = React;
+  </script>
+  <script type="text/babel">
+    import { createRoot } from "react-dom/client"
+    import { MessageSquare, Cpu, Users, Zap, Wrench, Settings, Send, RefreshCw, Trash2, X, Check, AlertCircle, ChevronRight, ChevronDown, PenLine, Plus, Bot, Play, Terminal, CircleStop, Eye, FileText, BarChart3, Activity, Copy, GitFork, RotateCcw, MessageCirclePlus, PanelLeftClose, PanelLeft, CornerDownLeft, LogIn, LogOut, Shield, Server, BookmarkCheck, Unplug } from "lucide-react"
+    import { create } from "zustand"
+    import { marked } from "marked"
+    import { h, init, styleModule, classModule, propsModule, toVNode } from "snabbdom"
+
+    const snabbdomPatch = init([styleModule, classModule, propsModule])
+
+    /* ═══════ 工具函数 ═══════ */
+    const EMPTY_ARR = [], EMPTY_OBJ = {}
+    const cx = (...a) => a.flat().filter(Boolean).join(" ")
+    const esc = s => (s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+    const fmtArgs = a => { try { return JSON.stringify(JSON.parse(a), null, 2) } catch { return a || "" } }
+    const timeAgo = t => { if (!t) return ""; const d = Date.now() - t; if (d < 6e4) return "now"; if (d < 36e5) return (d / 6e4 | 0) + "m"; if (d < 864e5) return (d / 36e5 | 0) + "h"; return new Date(t).toLocaleDateString() }
+    const fmtBytes = b => { if (!b) return "0 B"; const u = ["B", "KB", "MB", "GB"]; let i = 0; while (b >= 1024 && i < 3) { b /= 1024; i++ } return b.toFixed(1) + " " + u[i] }
+    const fmtDur = ms => { if (!ms) return "0s"; const s = ms / 1e3 | 0, m = s / 60 | 0, h = m / 60 | 0, d = h / 24 | 0; return d > 0 ? d + "d " + h % 24 + "h" : h > 0 ? h + "h " + m % 60 + "m" : m > 0 ? m + "m " + s % 60 + "s" : s + "s" }
+    const shortKey = k => !k ? "" : k.length <= 30 ? k : "..." + k.slice(-25)
+    const sessTitle = s => s.metadata?.title || (s.key?.lastIndexOf(":") !== -1 ? s.key.slice(s.key.lastIndexOf(":") + 1) : shortKey(s.key))
+    const sessInit = s => (sessTitle(s).replace(/^[^a-zA-Z0-9]+/, "")[0] || "#").toUpperCase()
+    const env2msg = e => { if (e.role === "tool") return { id: e.id, role: "tool", segments: [{ type: "tool_result", content: e.content, name: e.name, toolCallId: e.toolCallId, streaming: false }], streaming: false, interrupted: false, error: null, timestamp: e.createdAt, queued: false, processingId: null }; const segs = []; if (e.content) segs.push({ type: "text", content: e.content, streaming: false }); if (e.toolCalls?.length) segs.push({ type: "tool_calls", round: 0, calls: e.toolCalls.map((tc, i) => ({ index: i, name: tc.function.name, id: tc.id, arguments: tc.function.arguments, status: "done" })), allDone: true }); return { id: e.id, role: e.role, segments: segs, streaming: false, interrupted: false, error: null, timestamp: e.createdAt, queued: false, processingId: null } }
+    const html2vnode = (html, c = document.createElement("div")) => { c.innerHTML = html; return toVNode(c) }
+    const useMsgs = sk => useStore(s => s.sMsgs[sk]) ?? EMPTY_ARR
+
+    /* ═══════ 主题 ═══════ */
+    const DAISY_THEMES = [
+      { id: "dark", name: "Dark" }, { id: "night", name: "Night" }, { id: "forest", name: "Forest" },
+      { id: "business", name: "Business" }, { id: "dracula", name: "Dracula" }, { id: "black", name: "Black" },
+      { id: "luxury", name: "Luxury" }, { id: "cyberpunk", name: "Cyberpunk" },
+    ]
+    const SIZE_MODES = [
+      { id: "compact", name: "Compact", cls: "size-compact" },
+      { id: "default", name: "Default", cls: "size-default" },
+      { id: "comfort", name: "Comfortable", cls: "size-comfort" },
+      { id: "large", name: "Large Text", cls: "size-large" },
+    ]
+    const applyTheme = id => { document.documentElement.setAttribute("data-theme", id); localStorage.setItem("gw_th", id) }
+    const applySize = id => { const m = SIZE_MODES.find(s => s.id === id); if (m) { document.body.className = m.cls; localStorage.setItem("gw_sz", id) } }
+    const loadTheme = () => localStorage.getItem("gw_th") || "dark"
+    const loadSize = () => localStorage.getItem("gw_sz") || "default"
+    const loadEps = () => { try { return JSON.parse(localStorage.getItem("gw_ep") || "[]") } catch { return [] } }
+    const saveEps = l => { try { localStorage.setItem("gw_ep", JSON.stringify(l)) } catch { } }
+
+    /* ═══════ Zustand Store ═══════ */
+    const useStore = create(set => ({
+      connected: false, connecting: false, authFailed: false, authReason: "", gatewayVersion: "",
+      endpoints: loadEps(), activeEpId: null,
+      sessions: [], activeSK: null, sMsgs: {}, sLoaded: {},
+      inputText: "", viewMode: "preview", askQueue: [], activeTab: "chat",
+      procKeys: {}, models: {}, curModel: null, tools: [], skills: [], agents: [], bindings: [],
+      channels: [], config: null, workdir: null, cron: [],
+      channel: "websocket", peerId: "ws-client",
+      stats: null, toolStats: [], sidebarOpen: true, themeId: loadTheme(), sizeId: loadSize(),
+    }))
+
+    /* ═══════ Gateway Client ═══════ */
+    class GW {
+      constructor() { this.ws = null; this.nid = 1; this.pen = new Map(); this.rt = false; this.url = ""; this.tk = ""; this.pmap = {} }
+      async connect(url, token) {
+        this.rt = true; this.url = url; this.tk = token;
+        useStore.setState({ connecting: true, connected: false, authFailed: false, authReason: "" })
+        return new Promise((resolve, reject) => {
+          const full = url + (url.includes("?") ? "&" : "?") + "token=" + encodeURIComponent(token)
+          try { this.ws = new WebSocket(full) } catch (e) { useStore.setState({ connecting: false }); reject(e); return }
+          this.ws.onopen = () => { this.rc = 0; useStore.setState({ connecting: false, connected: true, authFailed: false }); resolve() }
+          this.ws.onmessage = e => { try { this.handle(JSON.parse(e.data)) } catch (err) { console.error(err) } }
+          this.ws.onerror = () => { }
+          this.ws.onclose = () => { useStore.setState({ connected: false, connecting: false, procKeys: {} }); this.pmap = {}; if (!useStore.getState().authFailed && this.rt) this.schedule() }
+        })
+      }
+      schedule() { const d = Math.min(1e3 * Math.pow(2, this.rc || 0), 3e4); this.rc = (this.rc || 0) + 1; this._rt = setTimeout(() => this.connect(this.url, this.tk), d) }
+      disconnect() { this.rt = false; if (this._rt) clearTimeout(this._rt); if (this.ws) this.ws.close(); this.ws = null; useStore.setState({ connected: false, connecting: false, procKeys: {} }); this.pmap = {} }
+      async req(m, p = {}) {
+        const id = this.nid++
+        return new Promise((resolve, reject) => {
+          if (!this.ws || this.ws.readyState !== 1) { reject(Error("Not connected")); return }
+          this.pen.set(id, { resolve, reject })
+          this.ws.send(JSON.stringify({ jsonrpc: "2.0", id, method: m, params: p }))
+          setTimeout(() => { if (this.pen.delete(id)) reject(Error("Timeout")) }, 3e4)
+        })
+      }
+      handle(m) { if (m.method) this.notify(m.method, m.params); else if (m.id != null) { const p = this.pen.get(m.id); if (p) { this.pen.delete(m.id); m.error ? p.reject(m.error) : p.resolve(m.result) } } }
+      notify(method, p) {
+        if (method === "connected") { useStore.setState({ gatewayVersion: p.version, authFailed: false }); const s = useStore.getState(); this.req("register", { channels: [s.channel] }).catch(() => { }); this.fetchInit() }
+        else if (method === "auth_failed") { useStore.setState({ authFailed: true, authReason: p.reason || "Auth failed", connecting: false }); this.rt = false }
+        else if (method === "stream_chunk") this.onChunk(p)
+        else if (method === "response") this.onResponse(p)
+        else if (method === "ask_user") useStore.setState(s => ({ askQueue: [...s.askQueue, p] }))
+        else if (method === "session.processing_started") { const sk = this.pmap[p.processingId] || p.sessionKey; if (sk) useStore.setState(s => ({ procKeys: { ...s.procKeys, [sk]: p.processingId } })) }
+        else if (method === "session.processing_completed") { const sk = this.pmap[p.processingId] || p.sessionKey; if (sk) useStore.setState(s => { const n = { ...s.procKeys }; delete n[sk]; return { procKeys: n } }); delete this.pmap[p.processingId] }
+        else if (method === "session.created") this.fetchSessions()
+        else if (method === "session.deleted") useStore.setState(s => { const m2 = { ...s.sMsgs }; delete m2[p.sessionKey]; const l = { ...s.sLoaded }; delete l[p.sessionKey]; return { sessions: s.sessions.filter(x => x.key !== p.sessionKey), sMsgs: m2, sLoaded: l, activeSK: s.activeSK === p.sessionKey ? null : s.activeSK } })
+      }
+      _k(pid, fb) { return this.pmap[pid] || fb }
+      onChunk(p) {
+        const { processingId: pid, sessionKey: sk, delta, finishReason: fr, toolCallDeltas: tcd } = p
+        const lk = this._k(pid, sk); if (!lk) return
+        useStore.setState(s => {
+          const sm = { ...s.sMsgs }; const msgs = [...(sm[lk] || EMPTY_ARR)]; const idx = msgs.findIndex(m => m.processingId === pid)
+          if (idx === -1) { const msg = { id: "m" + Date.now() + Math.random(), role: "assistant", processingId: pid, segments: [], streaming: fr === null, interrupted: fr === "interrupted", error: null, timestamp: Date.now(), queued: false }; if (delta) msg.segments.push({ type: "text", content: delta, streaming: fr === null && !(tcd && tcd.length) }); if (tcd && tcd.length) { if (msg.segments[0]?.type === "text") msg.segments[0].streaming = false; msg.segments.push({ type: "tool_calls", round: 0, calls: tcd.map(tc => ({ index: tc.index, name: tc.functionName || "", id: tc.id || "", arguments: tc.argumentsDelta || "", status: fr === "tool_calls" ? "done" : "calling" })), allDone: fr === "tool_calls" }) } msgs.push(msg) }
+          else { const m = { ...msgs[idx], segments: msgs[idx].segments.map(seg => ({ ...seg, ...(seg.type === "tool_calls" ? { calls: seg.calls.map(c => ({ ...c })) } : {}) })) }; if (delta) { const last = m.segments[m.segments.length - 1]; if (last?.type === "text" && last.streaming) last.content += delta; else { if (last?.type === "text") last.streaming = false; m.segments.push({ type: "text", content: delta, streaming: true }) } } if (tcd && tcd.length) { const last = m.segments[m.segments.length - 1]; if (last?.type === "text") last.streaming = false; let ts = m.segments.find(s2 => s2.type === "tool_calls" && !s2.allDone); if (!ts) { ts = { type: "tool_calls", round: m.segments.filter(s2 => s2.type === "tool_calls").length, calls: [], allDone: false }; m.segments.push(ts) } for (const tc of tcd) { const ex = ts.calls.find(c => c.index === tc.index); if (ex) { if (tc.id) ex.id = tc.id; if (tc.functionName) ex.name = tc.functionName; if (tc.argumentsDelta) ex.arguments += tc.argumentsDelta } else ts.calls.push({ index: tc.index, name: tc.functionName || "", id: tc.id || "", arguments: tc.argumentsDelta || "", status: "calling" }) } if (fr === "tool_calls") { ts.calls.forEach(c => c.status = "done"); ts.allDone = true } } m.streaming = fr === null; m.interrupted = fr === "interrupted"; if (fr === "stop" || fr === "interrupted") m.segments.forEach(seg => { if (seg.type === "text") seg.streaming = false; if (seg.type === "tool_calls") { seg.calls.forEach(c => c.status = "done"); seg.allDone = true } }); msgs[idx] = m }
+          sm[lk] = msgs; return { sMsgs: sm }
+        })
+      }
+      onResponse(p) {
+        const { processingId: pid, response, error } = p; const lk = this._k(pid, p.sessionKey); if (!lk) return
+        useStore.setState(s => { const sm = { ...s.sMsgs }; const msgs = [...(sm[lk] || EMPTY_ARR)]; const idx = msgs.findIndex(m => m.processingId === pid); if (idx !== -1) { const m = { ...msgs[idx], segments: msgs[idx].segments.map(seg => ({ ...seg, ...(seg.type === "tool_calls" ? { calls: seg.calls.map(c => ({ ...c })) } : {}) })), streaming: false }; if (error) m.error = error; if (response) { const lt = m.segments.filter(x => x.type === "text").pop(); if (lt) lt.content = response } m.segments.forEach(seg => { if (seg.type === "text") seg.streaming = false; if (seg.type === "tool_calls") { seg.calls.forEach(c => c.status = "done"); seg.allDone = true } }); msgs[idx] = m } sm[lk] = msgs; const nk = { ...s.procKeys }; delete nk[lk]; return { sMsgs: sm, procKeys: nk } }); delete this.pmap[pid]
+      }
+      async fetchInit() {
+        const r = await Promise.allSettled([this.req("listModels"), this.req("listAgents"), this.req("listSkills"), this.req("listTools"), this.req("listSessions"), this.req("getConfig"), this.req("getWorkdir"), this.req("listChannels"), this.req("getCurrentModel"), this.req("listCronJobs"), this.req("listBindings"), this.req("system.stats"), this.req("system.toolStats")])
+        const g = (i, d) => r[i].status === "fulfilled" ? r[i].value : d
+        const sess = g(4, EMPTY_ARR); useStore.setState({ models: g(0, EMPTY_OBJ), agents: g(1, EMPTY_ARR), skills: g(2, EMPTY_ARR), tools: g(3, EMPTY_ARR), sessions: sess, config: g(5, null), workdir: g(6, null), channels: g(7, EMPTY_ARR), curModel: g(8, null), cron: g(9, EMPTY_ARR), bindings: g(10, EMPTY_ARR), stats: g(11, null), toolStats: g(12, EMPTY_ARR) })
+        const st = useStore.getState(); if (!st.activeSK && sess.length > 0) { const sorted = [...sess].sort((a, b) => (b.lastActiveAt || 0) - (a.lastActiveAt || 0)); const sk = sorted[0].key; useStore.setState({ activeSK: sk }); this.loadHist(sk) } else if (sess.length === 0 && st.connected) { try { await this.createSess({}) } catch (e) { console.error("Auto-create session failed:", e) } }
+      }
+      async fetchSessions() { try { useStore.setState({ sessions: await this.req("listSessions") }) } catch { } }
+      async loadHist(sk, limit = 80) { try { const r = await this.req("sessionHistory", { key: sk, limit }); useStore.setState(s => ({ sMsgs: { ...s.sMsgs, [sk]: (r.messages || EMPTY_ARR).filter(e => e.role === "user" || e.role === "assistant").map(env2msg) }, sLoaded: { ...s.sLoaded, [sk]: true } })) } catch { } }
+      async send(text) {
+        const st = useStore.getState(); let sk = st.activeSK
+        if (!sk) { try { const r = await this.createSess({}); sk = r.sessionKey } catch { return } }
+        const um = { id: "m" + Date.now() + Math.random(), role: "user", processingId: null, segments: [{ type: "text", content: text, streaming: false }], streaming: false, interrupted: false, error: null, timestamp: Date.now(), queued: false }
+        useStore.setState(s => { const m = { ...s.sMsgs }; m[sk] = [...(m[sk] || EMPTY_ARR), um]; return { sMsgs: m, inputText: "" } })
+        try {
+          const res = await this.req("send", { text, sessionKey: sk, channel: st.channel, peerId: st.peerId }); this.pmap[res.processingId] = res.sessionKey
+          if (res.sessionKey && res.sessionKey !== sk) useStore.setState(s => { const m = { ...s.sMsgs }; m[res.sessionKey] = m[sk] || EMPTY_ARR; delete m[sk]; const nk = { ...s.procKeys }; delete nk[sk]; nk[res.sessionKey] = res.processingId; return { sMsgs: m, activeSK: res.sessionKey, procKeys: nk } })
+          else useStore.setState(s => ({ procKeys: { ...s.procKeys, [sk]: res.processingId } }))
+          if (res.queued) { const tk = res.sessionKey || sk; useStore.setState(s => { const m = { ...s.sMsgs }; m[tk] = (m[tk] || EMPTY_ARR).map(x => x.id === um.id ? { ...x, queued: true } : x); return { sMsgs: m } }) }
+        } catch (e) { useStore.setState(s => { const m = { ...s.sMsgs }; m[sk] = (m[sk] || EMPTY_ARR).map(x => x.id === um.id ? { ...x, error: String(e.message || e) } : x); return { sMsgs: m } }) }
+      }
+      async askRespond(qid, ans) { try { await this.req("askUserRespond", { questionId: qid, answer: ans }); useStore.setState(s => ({ askQueue: s.askQueue.filter(q => q.questionId !== qid) })) } catch { } }
+      async createSess(p = {}) { const r = await this.req("session.create", p); await this.fetchSessions(); useStore.setState({ activeSK: r.sessionKey }); await this.loadHist(r.sessionKey); if (p.title) try { await this.req("session.updateMetadata", { sessionKey: r.sessionKey, metadata: { title: p.title } }); await this.fetchSessions() } catch { } return r }
+      async delSess(sk) { try { await this.req("session.delete", { sessionKey: sk }) } catch { }; useStore.setState(s => { const m = { ...s.sMsgs }; delete m[sk]; const l = { ...s.sLoaded }; delete l[sk]; const rem = s.sessions.filter(x => x.key !== sk); return { sessions: rem, sMsgs: m, sLoaded: l, activeSK: s.activeSK === sk ? (rem[0]?.key || null) : s.activeSK } }) }
+      async forkSess(sk, mid) { const r = await this.req("session.fork", { sessionKey: sk, messageId: mid }); await this.fetchSessions(); useStore.setState({ activeSK: r.newSessionKey }); await this.loadHist(r.newSessionKey); return r }
+      async editMsg(sk, mid, txt) { useStore.setState(s => { const m = { ...s.sMsgs }; const msgs = [...(m[sk] || EMPTY_ARR)]; const i = msgs.findIndex(x => x.id === mid); if (i !== -1) m[sk] = [...msgs.slice(0, i), { ...msgs[i], segments: [{ type: "text", content: txt, streaming: false }], error: null }]; return { sMsgs: m } }); try { const r = await this.req("session.editMessage", { sessionKey: sk, messageId: mid, newText: txt }); this.pmap[r.processingId] = sk; useStore.setState(s => ({ procKeys: { ...s.procKeys, [sk]: r.processingId } })) } catch (e) { alert("Edit failed: " + (e.message || e)); this.loadHist(sk) } }
+      async regen(sk, model) { useStore.setState(s => { const m = { ...s.sMsgs }; const msgs = [...(m[sk] || EMPTY_ARR)]; const la = msgs.findLastIndex(x => x.role === "assistant"); if (la !== -1) m[sk] = msgs.slice(0, la); return { sMsgs: m } }); try { const r = await this.req("regenerate", { sessionKey: sk, ...(model ? { model } : {}) }); this.pmap[r.processingId] = sk; useStore.setState(s => ({ procKeys: { ...s.procKeys, [sk]: r.processingId } })) } catch (e) { alert("Regen failed: " + (e.message || e)); this.loadHist(sk) } }
+      async interrupt(sk) { try { await this.req("sessionInterrupt", { sessionKey: sk }) } catch { } }
+      async updateMeta(sk, meta) { try { await this.req("session.updateMetadata", { sessionKey: sk, metadata: meta }); await this.fetchSessions() } catch { } }
+      async fetchStats() { try { const [s, t] = await Promise.all([this.req("system.stats"), this.req("system.toolStats")]); useStore.setState({ stats: s, toolStats: t }) } catch { } }
+    }
+    const gw = new GW()
+
+    /* ═══════ Snabbdom 流式渲染 ═══════ */
+    const SnabText = React.memo(function SnabText({ mid, si, sk }) {
+      const ref = React.useRef(null), vref = React.useRef(null), raf = React.useRef(null), ok = React.useRef(true)
+      const patch = React.useCallback(() => {
+        const el = ref.current; if (!el || !ok.current) return
+        const st = useStore.getState(); const msgs = st.sMsgs[sk] || EMPTY_ARR; const msg = msgs.find(m => m.id === mid); const seg = msg?.segments?.[si]
+        if (!seg || seg.type !== "text") return
+        const raw = st.viewMode === "raw"; let html = ""
+        if (raw) { const ls = "white-space:pre-wrap;font-size:0.92em;line-height:1.65"; html = seg.content.split("\n").map(x => x.trim() === "" ? "<br/>" : `<div style="${ls}">${esc(x)}</div>`).join("") }
+        else try { html = marked.parse(seg.content || "", { breaks: true }) } catch { html = "<p>" + esc(seg.content || "").replace(/\n/g, "<br>") + "</p>" }
+        const c = document.createElement("div"); c.className = "md-body"; Object.assign(c.style, { fontSize: "0.92em", lineHeight: "1.65" })
+        const vn = html2vnode(html, c); const ch = [vn]
+        if (seg.streaming) ch.push(h("span", { style: { display: "inline-block", width: "2px", height: "1em", background: "oklch(var(--p))", marginLeft: "1px", verticalAlign: "text-bottom", animation: "blink .8s step-end infinite" } }))
+        const nv = h("div", {}, ch)
+        try { if (vref.current && vref.current.elm && document.contains(vref.current.elm)) snabbdomPatch(vref.current, nv); else snabbdomPatch(el, nv); vref.current = nv }
+        catch { el.innerHTML = esc(seg.content || "").replace(/\n/g, "<br>") + (seg.streaming ? '<span style="display:inline-block;width:2px;height:1em;background:oklch(var(--p));margin-left:1px;vertical-align:text-bottom;animation:blink .8s step-end infinite"></span>' : ""); vref.current = null }
+      }, [mid, si, sk])
+      React.useEffect(() => {
+        ok.current = true; patch(); let lk = "", lt = 0
+        const u = useStore.subscribe(st => {
+          const msgs = st.sMsgs[sk] || EMPTY_ARR; const msg = msgs.find(m => m.id === mid); const seg = msg?.segments?.[si]
+          if (!seg || seg.type !== "text") return; const k = seg.content.length + "|" + seg.streaming + "|" + st.viewMode; if (k === lk) return; lk = k
+          const now = performance.now(), min = seg.streaming && st.viewMode !== "raw" ? 150 : 16
+          if (now - lt < min) { if (!raf.current) raf.current = requestAnimationFrame(() => { raf.current = null; lt = performance.now(); patch() }) }
+          else { if (raf.current) { cancelAnimationFrame(raf.current); raf.current = null } lt = now; patch() }
+        })
+        return () => { ok.current = false; u(); if (raf.current) cancelAnimationFrame(raf.current) }
+      }, [mid, si, sk, patch])
+      return React.createElement("div", { ref })
+    })
+
+    /* ═══════ 消息组件 ═══════ */
+    function ToolSeg({ seg }) {
+      return <div className="mt-2">
+        <div className="collapse collapse-arrow bg-base-300/50 rounded-lg border border-base-300">
+          <input type="checkbox" defaultChecked />
+          <div className="collapse-title text-sm font-semibold text-primary flex items-center gap-2 min-h-0 py-2">
+            <Wrench size={12} /> Round {seg.round + 1}
+            <span className={cx("badge badge-sm", seg.allDone ? "badge-success" : "badge-warning")}>{seg.allDone ? "done" : "calling..."}</span>
+            <span className="text-base-content/40 font-normal">({seg.calls.length})</span>
+          </div>
+          <div className="collapse-content text-xs">
+            {seg.calls.map((tc, i) => <ToolCallEntry key={i} tc={tc} i={i} />)}
+          </div>
+        </div>
+      </div>
+    }
+
+    function ToolCallEntry({ tc, i }) {
+      const [open, setOpen] = React.useState(false)
+      return <div className="py-1.5 border-b border-base-300 last:border-b-0 cursor-pointer hover:text-base-content transition-colors" onClick={() => setOpen(!open)}>
+        <div className="flex items-center gap-1.5">
+          {open ? <ChevronDown size={11} /> : <ChevronRight size={11} />}
+          <span className="font-mono text-primary font-semibold">{tc.name || "..."}</span>
+          <span className={cx("badge badge-xs", tc.status === "done" ? "badge-success" : "badge-warning")}>{tc.status}</span>
+        </div>
+        {open && tc.arguments && <div className="tool-args mt-1.5">{fmtArgs(tc.arguments)}</div>}
+      </div>
+    }
+
+    const MsgItem = React.memo(function MsgItem({ msg, sk, isLast }) {
+      const isU = msg.role === "user", tc = msg.segments.filter(s => s.type === "tool_calls").reduce((a, s) => a + s.calls.length, 0)
+      const [editing, setEdit] = React.useState(false), [etxt, setEtxt] = React.useState("")
+      const proc = useStore(s => !!s.procKeys[sk])
+      return <div className="flex gap-3 mb-5 anim-fade group">
+        <div className={cx("w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 text-xs font-bold", isU ? "bg-info text-info-content" : "bg-primary text-primary-content")}>{isU ? "U" : "A"}</div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-1 flex-wrap">
+            <span className="text-sm font-semibold opacity-70">{isU ? "You" : "Assistant"}</span>
+            <span className="text-xs opacity-40">{timeAgo(msg.timestamp)}</span>
+            {msg.queued && <span className="badge badge-xs badge-warning">queued</span>}
+            {msg.interrupted && <span className="badge badge-xs badge-error">interrupted</span>}
+            {tc > 0 && <span className="badge badge-xs badge-info">{tc} tools</span>}
+          </div>
+          {msg.segments.map((seg, i) => {
+            if (seg.type === "text") return isU
+              ? <div key={i} className="whitespace-pre-wrap break-words text-[0.92em] leading-relaxed">{seg.content}</div>
+              : <SnabText key={msg.id} mid={msg.id} si={i} sk={sk} />
+            if (seg.type === "tool_calls") return <ToolSeg key={i} seg={seg} />
+            if (seg.type === "tool_result") return <div key={i} className="text-xs opacity-50 italic">Tool result ({seg.name})</div>
+            return null
+          })}
+          {msg.error && <div className="text-error text-sm mt-1 flex items-center gap-1"><AlertCircle size={12} />{msg.error}</div>}
+          {!msg.streaming && !editing && <div className="flex gap-0.5 mt-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+            {isU && <button className="btn btn-ghost btn-xs" title="Edit" onClick={() => { setEtxt(msg.segments.find(s => s.type === "text")?.content || ""); setEdit(true) }}><PenLine size={12} /></button>}
+            <button className="btn btn-ghost btn-xs" title="Fork" onClick={() => gw.forkSess(sk, msg.id)}><GitFork size={12} /></button>
+            <button className="btn btn-ghost btn-xs" title="Copy" onClick={() => navigator.clipboard?.writeText(msg.segments.find(s => s.type === "text")?.content || "")}><Copy size={12} /></button>
+            {isLast && !proc && <button className="btn btn-ghost btn-xs" title="Regenerate" onClick={() => gw.regen(sk)}><RotateCcw size={12} /></button>}
+          </div>}
+          {editing && <div className="mt-2">
+            <textarea className="textarea textarea-bordered w-full text-sm" value={etxt} onChange={e => setEtxt(e.target.value)} autoFocus rows={2}
+              onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); gw.editMsg(sk, msg.id, etxt.trim()); setEdit(false) } if (e.key === "Escape") setEdit(false) }} />
+            <div className="flex gap-2 mt-2">
+              <button className="btn btn-sm btn-ghost" onClick={() => setEdit(false)}>Cancel</button>
+              <button className="btn btn-sm btn-primary" onClick={() => { gw.editMsg(sk, msg.id, etxt.trim()); setEdit(false) }}><Check size={12} /> Submit</button>
+            </div>
+          </div>}
+        </div>
+      </div>
+    }, (p, n) => { const a = p.msg, b = n.msg; return a.id === b.id && a.streaming === b.streaming && a.interrupted === b.interrupted && a.error === b.error && a.queued === b.queued && p.isLast === n.isLast && a.segments.length === b.segments.length && a.segments.every((s, i) => s.type === b.segments[i].type && (s.type !== "tool_calls" || s.allDone === b.segments[i].allDone)) })
+
+    /* ═══════ 登录界面 ═══════ */
+    function LoginScreen() {
+      const connected = useStore(s => s.connected), connecting = useStore(s => s.connecting), authFailed = useStore(s => s.authFailed), authReason = useStore(s => s.authReason), endpoints = useStore(s => s.endpoints)
+      const [name, setName] = React.useState(""), [url, setUrl] = React.useState("ws://localhost:8765"), [token, setToken] = React.useState(""), [sel, setSel] = React.useState(null), [form, setForm] = React.useState(endpoints.length === 0)
+      if (connected) return null
+      const doConnect = async (u, t) => { try { await gw.connect(u, t); const st = useStore.getState(); const ep = st.endpoints.find(e => e.url === u && e.token === t); if (ep) useStore.setState({ activeEpId: ep.id }) } catch { } }
+      const doAdd = () => { if (!url.trim() || !token.trim()) return; const ep = { id: "ep_" + Date.now(), name: name.trim() || url.trim().replace(/^wss?:\/\//, ""), url: url.trim(), token: token.trim() }; const upd = [...endpoints, ep]; useStore.setState({ endpoints: upd }); saveEps(upd); setName(""); setUrl("ws://localhost:8765"); setToken(""); setForm(false); doConnect(ep.url, ep.token) }
+      return <div className="modal modal-open"><div className="modal-box anim-modal">
+        <h3 className="text-lg font-bold flex items-center gap-2"><Shield size={20} className="text-primary" /> Gateway</h3>
+        <p className="py-2 text-sm opacity-60">Connect to an Agent Gateway endpoint</p>
+        {authFailed && <div className="alert alert-warning mb-4"><AlertCircle size={16} /><span>{authReason || "Authentication failed"}</span></div>}
+        {endpoints.length > 0 && !form ? <>
+          <div className="max-h-48 overflow-y-auto mb-4 flex flex-col gap-1">
+            {endpoints.map(ep => <button key={ep.id} className={cx("btn btn-sm justify-start gap-3", sel === ep.id ? "btn-primary" : "btn-ghost")} onClick={() => setSel(ep.id)}>
+              <Server size={14} className="flex-shrink-0 opacity-60" />
+              <div className="flex-1 text-left min-w-0"><div className="font-semibold truncate">{ep.name}</div><div className="text-xs font-mono opacity-60 truncate">{ep.url}</div></div>
+              <button className="btn btn-ghost btn-xs" onClick={e => { e.stopPropagation(); const u = endpoints.filter(x => x.id !== ep.id); useStore.setState({ endpoints: u }); saveEps(u) }}><Trash2 size={11} /></button>
+            </button>)}
+          </div>
+          <div className="flex gap-2"><button className="btn btn-sm btn-ghost" onClick={() => { useStore.setState({ endpoints: EMPTY_ARR }); saveEps([]) }}><Trash2 size={12} /> Clear</button><div className="flex-1" /><button className="btn btn-sm btn-ghost" onClick={() => setForm(true)}><Plus size={12} /> Add</button><button className="btn btn-sm btn-primary" disabled={!sel || connecting} onClick={() => { const ep = endpoints.find(e => e.id === sel); if (ep) doConnect(ep.url, ep.token) }}>{connecting ? <span className="loading loading-spinner loading-xs"></span> : <LogIn size={13} />} Connect</button></div>
+        </> : <>
+          <div className="form-control mb-3"><label className="label"><span className="label-text text-xs">Name (optional)</span></label><input className="input input-bordered input-sm w-full" placeholder="My Gateway" value={name} onChange={e => setName(e.target.value)} /></div>
+          <div className="form-control mb-3"><label className="label"><span className="label-text text-xs">WebSocket URL</span></label><input className="input input-bordered input-sm w-full" placeholder="ws://localhost:8765" value={url} onChange={e => setUrl(e.target.value)} /></div>
+          <div className="form-control mb-3"><label className="label"><span className="label-text text-xs">Token</span></label><input className="input input-bordered input-sm w-full" type="password" placeholder="Token from console" value={token} onChange={e => setToken(e.target.value)} onKeyDown={e => { if (e.key === "Enter") doAdd() }} /></div>
+          <div className="flex gap-2 mt-5">{endpoints.length > 0 && <button className="btn btn-sm btn-ghost" onClick={() => setForm(false)}>Back</button>}<div className="flex-1" /><button className="btn btn-sm btn-primary" disabled={!url.trim() || !token.trim() || connecting} onClick={doAdd}><BookmarkCheck size={13} /> Save & Connect</button></div>
+        </>}
+      </div></div>
+    }
+
+    /* ═══════ Ask User 模态 ═══════ */
+    function AskModal() {
+      const q = useStore(s => s.askQueue[0]), [ot, setOt] = React.useState({})
+      if (!q) return null
+      return <div className="modal modal-open"><div className="modal-box anim-modal">
+        <div className="w-10 h-10 rounded-xl bg-warning/15 flex items-center justify-center mb-4"><AlertCircle size={20} className="text-warning" /></div>
+        <h3 className="text-lg font-bold">Agent requires your input</h3>
+        <p className="py-2 text-sm leading-relaxed">{q.question}</p>
+        <div className="flex flex-col gap-2 mb-4">{q.options.map((o, i) => <button key={i} className="btn btn-sm btn-ghost justify-start" onClick={() => gw.askRespond(q.questionId, o)}>{o}</button>)}</div>
+        {q.allowOther && <div className="flex gap-2 mb-4"><input className="input input-bordered input-sm flex-1" placeholder="Type your own answer..." value={ot[q.questionId] || ""} onChange={e => setOt(s => ({ ...s, [q.questionId]: e.target.value }))} onKeyDown={e => { if (e.key === "Enter" && (ot[q.questionId] || "").trim()) gw.askRespond(q.questionId, ot[q.questionId].trim()) }} /><button className="btn btn-sm btn-primary" onClick={() => { if ((ot[q.questionId] || "").trim()) gw.askRespond(q.questionId, ot[q.questionId].trim()) }}><Check size={12} /></button></div>}
+        <div className="flex justify-between items-center"><span className="text-xs opacity-40">Required · blocks agent until answered</span><button className="btn btn-xs btn-ghost" onClick={() => useStore.setState(s => ({ askQueue: s.askQueue.slice(1) }))}><X size={10} /> Dismiss</button></div>
+      </div></div>
+    }
+
+    /* ═══════ 端点切换 ═══════ */
+    function EpSwitcher() {
+      const eps = useStore(s => s.endpoints), aid = useStore(s => s.activeEpId), [open, setOpen] = React.useState(false), ref = React.useRef(null)
+      const active = eps.find(e => e.id === aid)
+      React.useEffect(() => { const h = e => { if (ref.current && !ref.current.contains(e.target)) setOpen(false) }; document.addEventListener("mousedown", h); return () => document.removeEventListener("mousedown", h) }, [])
+      if (!active) return null
+      return <div className="relative" ref={ref}>
+        <button className="btn btn-ghost btn-sm gap-1.5 max-w-[160px]" onClick={() => setOpen(!open)}><Server size={11} /><span className="truncate">{active.name}</span><ChevronDown size={10} /></button>
+        {open && <div className="dropdown-content absolute right-0 top-full mt-1 w-64 bg-base-200 border border-base-300 rounded-xl p-1.5 shadow-2xl z-50 anim-modal">
+          {eps.map(ep => <button key={ep.id} className={cx("btn btn-sm btn-ghost justify-start gap-2 w-full", ep.id === aid && "btn-primary")} onClick={() => { if (ep.id !== aid) { gw.disconnect(); useStore.setState({ activeEpId: ep.id }); gw.connect(ep.url, ep.token) } setOpen(false) }}>
+            {ep.id === aid ? <BookmarkCheck size={12} /> : <Server size={12} />}
+            <div className="flex-1 text-left min-w-0"><div className="font-semibold truncate">{ep.name}</div><div className="text-xs font-mono opacity-60 truncate">{ep.url}</div></div>
+          </button>)}
+          <div className="divider my-1"></div>
+          <button className="btn btn-sm btn-ghost gap-2 w-full justify-start text-error" onClick={() => { gw.disconnect(); setOpen(false) }}><Unplug size={12} />Disconnect</button>
+        </div>}
+      </div>
+    }
+
+    /* ═══════ 顶栏 ═══════ */
+    const TABS = [{ id: "chat", icon: MessageSquare, label: "Chat" }, { id: "models", icon: Cpu, label: "Models" }, { id: "agents", icon: Users, label: "Agents" }, { id: "skills", icon: Zap, label: "Skills" }, { id: "tools", icon: Wrench, label: "Tools" }, { id: "observe", icon: BarChart3, label: "Observe" }, { id: "system", icon: Settings, label: "System" }]
+    function TopBar() {
+      const connected = useStore(s => s.connected), connecting = useStore(s => s.connecting), ver = useStore(s => s.gatewayVersion), tab = useStore(s => s.activeTab)
+      return <div className="navbar bg-base-200 border-b border-base-300 min-h-[46px] gap-2 px-3">
+        <div className="navbar-start flex items-center gap-2">
+          <div className={cx("w-2 h-2 rounded-full", connected ? "bg-success" : connecting ? "bg-warning anim-pulse" : "bg-error")} />
+          <span className={cx("text-xs", connected ? "text-success" : connecting ? "text-warning" : "text-error")}>{connected ? "Connected" + (ver ? " · v" + ver : "") : connecting ? "Connecting..." : "Offline"}</span>
+        </div>
+        <div className="navbar-center">
+          <div className="tabs tabs-boxed bg-base-300 p-0.5 gap-0.5">
+            {TABS.map(t => <button key={t.id} className={cx("tab tab-sm gap-1", tab === t.id && "tab-active")} onClick={() => useStore.setState({ activeTab: t.id })}><t.icon size={12} />{t.label}</button>)}
+          </div>
+        </div>
+        <div className="navbar-end flex items-center gap-1.5"><EpSwitcher /><button className="btn btn-ghost btn-sm btn-circle text-error" onClick={() => gw.disconnect()}><LogOut size={13} /></button></div>
+      </div>
+    }
+
+    /* ═══════ 侧边栏 ═══════ */
+    function SideBar() {
+      const sessions = useStore(s => s.sessions), activeSK = useStore(s => s.activeSK), procKeys = useStore(s => s.procKeys), connected = useStore(s => s.connected), tab = useStore(s => s.activeTab), open = useStore(s => s.sidebarOpen)
+      const [showNew, setShowNew] = React.useState(false), [title, setTitle] = React.useState("")
+      if (tab !== "chat" || !open) return null
+      const sorted = [...sessions].sort((a, b) => (b.lastActiveAt || 0) - (a.lastActiveAt || 0))
+      return <div className="w-64 min-w-64 bg-base-200 border-r border-base-300 flex flex-col">
+        <div className="p-3 border-b border-base-300 flex items-center justify-between">
+          <div className="flex items-center gap-2 text-xs font-bold tracking-wider text-primary"><Terminal size={16} /> SESSIONS</div>
+          <div className="flex gap-1"><button className="btn btn-ghost btn-xs btn-square" onClick={() => setShowNew(!showNew)}><MessageCirclePlus size={14} /></button><button className="btn btn-ghost btn-xs btn-square" onClick={() => useStore.setState({ sidebarOpen: false })}><PanelLeftClose size={14} /></button></div>
+        </div>
+        {showNew && <div className="p-2.5 border-b border-base-300 anim-fade">
+          <input className="input input-bordered input-sm w-full mb-2" placeholder="Title (optional)" value={title} onChange={e => setTitle(e.target.value)} onKeyDown={e => { if (e.key === "Enter") { gw.createSess({ title: title || undefined }); setShowNew(false); setTitle("") } }} />
+          <div className="flex gap-1.5"><button className="btn btn-primary btn-sm flex-1" disabled={!connected} onClick={() => { gw.createSess({ title: title || undefined }); setShowNew(false); setTitle("") }}><Plus size={10} /> Create</button><button className="btn btn-ghost btn-sm" onClick={() => setShowNew(false)}>Cancel</button></div>
+        </div>}
+        <div className="flex-1 overflow-y-auto p-1.5">
+          {sorted.length === 0 ? <div className="text-center text-sm opacity-40 py-6">No sessions yet.</div>
+            : sorted.map(s => <button key={s.key} className={cx("btn btn-ghost btn-sm justify-start gap-2.5 w-full mb-0.5 px-3", s.key === activeSK && "btn-primary", procKeys[s.key] && "border-l-2 border-l-warning")} onClick={() => { useStore.setState({ activeSK: s.key }); if (!useStore.getState().sLoaded[s.key]) gw.loadHist(s.key) }} title={s.key}>
+              <div className={cx("w-9 h-9 rounded-lg flex items-center justify-center text-sm font-bold flex-shrink-0 border", s.key === activeSK ? "bg-primary/20 text-primary border-primary/30" : "bg-base-300 border-base-300 text-base-content/50")}>{sessInit(s)}</div>
+              <div className="flex-1 min-w-0 text-left"><div className="font-semibold truncate text-sm">{sessTitle(s)}{s.ephemeral && <span className="badge badge-xs badge-info ml-1">tmp</span>}{procKeys[s.key] && <span className="badge badge-xs badge-warning ml-1">run</span>}</div><div className="text-xs opacity-40">{s.messageCount || 0} msgs</div></div>
+              <span className="text-xs opacity-30 flex-shrink-0">{timeAgo(s.lastActiveAt || s.createdAt)}</span>
+            </button>)}
+        </div>
+        <div className="p-1.5 border-t border-base-300"><button className="btn btn-ghost btn-sm w-full gap-1.5" disabled={!connected} onClick={() => gw.fetchSessions()}><RefreshCw size={11} /> Refresh</button></div>
+      </div>
+    }
+
+    /* ═══════ 聊天面板 ═══════ */
+    function ChatPanel() {
+      const sk = useStore(s => s.activeSK), msgs = useMsgs(sk), input = useStore(s => s.inputText), proc = useStore(s => !!s.procKeys[sk]), connected = useStore(s => s.connected), vm = useStore(s => s.viewMode), sessions = useStore(s => s.sessions), sb = useStore(s => s.sidebarOpen)
+      const taRef = React.useRef(null), botRef = React.useRef(null), contRef = React.useRef(null)
+      const sess = sessions.find(s => s.key === sk), lastAI = msgs.findLastIndex(m => m.role === "assistant" && !m.streaming)
+      const msgLen = msgs.length
+      React.useEffect(() => { const c = contRef.current; if (!c) return; if (c.scrollHeight - c.scrollTop - c.clientHeight < 120) botRef.current?.scrollIntoView({ behavior: "smooth" }) }, [msgLen])
+      const send = () => { const t = input.trim(); if (!t || !connected) return; proc ? gw.interrupt(sk) : gw.send(t) }
+      if (!sk) return <div className="flex-1 flex flex-col">
+        <div className="navbar bg-base-200 border-b border-base-300 min-h-[46px]">{!sb && <button className="btn btn-ghost btn-xs btn-square mr-2" onClick={() => useStore.setState({ sidebarOpen: true })}><PanelLeft size={14} /></button>}<span className="font-semibold">Chat</span></div>
+        <div className="flex-1 flex flex-col items-center justify-center gap-4 opacity-40"><MessageSquare size={36} strokeWidth={1.2} /><span className="text-lg">No conversation selected</span><button className="btn btn-outline btn-sm gap-2" disabled={!connected} onClick={() => gw.send("Hello")}><MessageCirclePlus size={16} /> Start a new chat</button></div>
+      </div>
+      return <div className="flex-1 flex flex-col overflow-hidden">
+        <div className="navbar bg-base-200 border-b border-base-300 min-h-[46px] px-4 gap-2">
+          <div className="flex items-center gap-2 min-w-0 flex-1">{!sb && <button className="btn btn-ghost btn-xs btn-square mr-1" onClick={() => useStore.setState({ sidebarOpen: true })}><PanelLeft size={14} /></button>}<span className="font-semibold truncate" title={sk}>{sess ? sessTitle(sess) : shortKey(sk)}</span>{sess?.ephemeral && <span className="badge badge-xs badge-info">ephemeral</span>}{proc && <span className="badge badge-xs badge-success">processing</span>}</div>
+          <div className="flex items-center gap-1.5 flex-shrink-0">
+            <div className="join"><button className={cx("join-item btn btn-xs", vm === "preview" && "btn-active")} onClick={() => useStore.setState({ viewMode: "preview" })}><Eye size={11} /> Preview</button><button className={cx("join-item btn btn-xs", vm === "raw" && "btn-active")} onClick={() => useStore.setState({ viewMode: "raw" })}><FileText size={11} /> Raw</button></div>
+            <button className="btn btn-ghost btn-xs btn-square" onClick={() => gw.loadHist(sk)} title="Reload"><RefreshCw size={11} /></button>
+            <button className="btn btn-ghost btn-xs btn-square text-error" onClick={() => { if (confirm("Delete?")) gw.delSess(sk) }}><Trash2 size={11} /></button>
+          </div>
+        </div>
+        {msgs.length === 0 ? <div className="flex-1 flex flex-col items-center justify-center gap-3 opacity-40"><MessageSquare size={28} strokeWidth={1.2} /><span>No messages yet.</span></div>
+          : <div className="flex-1 overflow-y-auto px-5 py-4" ref={contRef}>{msgs.map((m, i) => <MsgItem key={m.id} msg={m} sk={sk} isLast={i === lastAI} />)}{proc && msgs[msgs.length - 1]?.role === "user" && <div className="flex gap-1.5 pl-10 mb-3"><span className="w-1.5 h-1.5 rounded-full bg-primary anim-dot" style={{ animationDelay: "0s" }} /><span className="w-1.5 h-1.5 rounded-full bg-primary anim-dot" style={{ animationDelay: ".2s" }} /><span className="w-1.5 h-1.5 rounded-full bg-primary anim-dot" style={{ animationDelay: ".4s" }} /></div>}<div ref={botRef} /></div>}
+        <div className="border-t border-base-300 p-3 flex gap-2 items-end bg-base-200">
+          <textarea ref={taRef} rows={1} className="textarea textarea-bordered flex-1 text-sm min-h-[38px] max-h-[120px]" value={input} onChange={e => { useStore.setState({ inputText: e.target.value }); e.target.style.height = "auto"; e.target.style.height = Math.min(e.target.scrollHeight, 120) + "px" }} onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send() } }} placeholder={connected ? (proc ? "Press Enter to interrupt..." : "Message... (Enter to send)") : "Connect to start..."} disabled={!connected} />
+          <button className={cx("btn btn-sm", proc ? "btn-warning" : "btn-primary")} onClick={send} disabled={!connected || (!input.trim() && !proc)}>{proc ? <CircleStop size={14} /> : <CornerDownLeft size={14} />}</button>
+        </div>
+      </div>
+    }
+
+    /* ═══════ 管理面板 ═══════ */
+    function ModelsPanel() {
+      const models = useStore(s => s.models), cur = useStore(s => s.curModel), connected = useStore(s => s.connected)
+      const [sw, setSw] = React.useState(""), [ed, setEd] = React.useState(false), [fs, setFs] = React.useState({})
+      React.useEffect(() => { if (cur?.config) setFs({ key: cur.key, modelId: cur.config.modelId || "", baseUrl: cur.config.baseUrl || "", temperature: cur.config.temperature ?? .7, maxTokens: cur.config.maxTokens ?? 4096, topP: cur.config.topP ?? 1, freqPen: cur.config.frequencyPenalty ?? 0, presPen: cur.config.presencePenalty ?? 0 }) }, [cur])
+      const switchM = async k => { setSw(k); try { await gw.req("switchModel", { key: k }); useStore.setState({ curModel: await gw.req("getCurrentModel") }) } catch { } setSw("") }
+      const saveM = async () => { const c = { modelId: fs.modelId, baseUrl: fs.baseUrl || undefined, temperature: +fs.temperature, maxTokens: +fs.maxTokens, topP: +fs.topP, frequencyPenalty: +fs.freqPen, presencePenalty: +fs.presPen }; try { await gw.req("configureModel", { key: fs.key, config: c }) } catch { try { await gw.req("config.update", { path: "models." + fs.key, value: c }) } catch (e) { alert("Save failed: " + (e.message || e)); return } } setEd(false); gw.fetchInit() }
+      return <div className="flex-1 flex flex-col overflow-hidden">
+        <div className="navbar bg-base-200 border-b border-base-300 min-h-[46px] px-5"><span className="font-semibold text-lg">Models</span><div className="flex-1" /><button className="btn btn-primary btn-sm gap-1.5" disabled={!connected} onClick={async () => { const k = prompt("Key:"); if (!k) return; const m = prompt("Model ID:"); if (!m) return; try { await gw.req("config.update", { path: "models." + k, value: { modelId: m } }); gw.fetchInit() } catch (e) { alert(e.message || e) } }}><Plus size={12} /> Add</button></div>
+        <div className="flex-1 overflow-y-auto p-5">
+          {cur && <><div className="text-xs font-semibold uppercase tracking-wider opacity-40 mb-3">Current Model</div>
+            <div className="card bg-base-200 border border-base-300 mb-5"><div className="card-body p-4">
+              <div className="flex justify-between items-center mb-2"><span className="font-semibold">{cur.key} <span className="badge badge-sm badge-success">active</span></span>{!ed ? <button className="btn btn-ghost btn-xs" onClick={() => setEd(true)}><PenLine size={12} /> Edit</button> : <div className="flex gap-1.5"><button className="btn btn-primary btn-xs" onClick={saveM}>Save</button><button className="btn btn-ghost btn-xs" onClick={() => setEd(false)}>Cancel</button></div>}</div>
+              {ed ? <div className="grid grid-cols-2 gap-3 mt-2">{[["Model ID", "modelId"], ["Base URL", "baseUrl"], ["Temperature", "temperature"], ["Max Tokens", "maxTokens"], ["Top P", "topP"], ["Freq Penalty", "freqPen"]].map(([l, k]) => <div className="form-control" key={k}><label className="label py-0.5"><span className="label-text text-xs">{l}</span></label><input className="input input-bordered input-sm w-full" value={fs[k] || ""} onChange={e => setFs(s => ({ ...s, [k]: e.target.value }))} /></div>)}</div>
+                : <div className="text-sm opacity-60 leading-relaxed">{cur.config?.modelId}<br />temp: {cur.config?.temperature ?? "-"} · top_p: {cur.config?.topP ?? "-"} · max_tokens: {cur.config?.maxTokens ?? "-"}{cur.config?.baseUrl && <><br />base: <span className="font-mono bg-base-300 px-1 rounded text-xs">{cur.config.baseUrl}</span></>}</div>}
+            </div></div></>}
+          <div className="text-xs font-semibold uppercase tracking-wider opacity-40 mb-3">Available Models</div>
+          {Object.keys(models).length === 0 ? <div className="opacity-40">No models loaded.</div> : Object.entries(models).map(([key, mid]) => <div key={key} className="card bg-base-200 border border-base-300 mb-2"><div className="card-body p-3 flex-row items-center justify-between">
+            <div><span className="font-semibold">{key}</span><div className="font-mono text-xs opacity-50">{mid}</div></div>
+            <div className="flex gap-1.5">{cur?.key === key ? <span className="badge badge-sm badge-success">active</span> : <button className="btn btn-primary btn-xs" disabled={sw === key} onClick={() => switchM(key)}>{sw === key ? <span className="loading loading-spinner loading-xs"></span> : "Switch"}</button>}<button className="btn btn-ghost btn-xs text-error" onClick={async () => { if (!confirm("Remove?")) return; try { const c = await gw.req("getConfig"); delete c.models[key]; await gw.req("setConfig", { config: c }); gw.fetchInit() } catch { } }}><X size={10} /></button></div>
+          </div></div>)}
+        </div>
+      </div>
+    }
+
+    function AgentsPanel() {
+      const agents = useStore(s => s.agents), bindings = useStore(s => s.bindings), connected = useStore(s => s.connected), ch = useStore(s => s.channel), pid = useStore(s => s.peerId)
+      const [route, setRoute] = React.useState(null), [addA, setAddA] = React.useState(false), [addB, setAddB] = React.useState(false)
+      const [af, setAf] = React.useState({ id: "", name: "", personality: "" }), [bf, setBf] = React.useState({ agentId: "", tier: 0, matchKey: "channel", matchValue: "", priority: 0 })
+      return <div className="flex-1 flex flex-col overflow-hidden">
+        <div className="navbar bg-base-200 border-b border-base-300 min-h-[46px] px-5"><span className="font-semibold text-lg">Agents & Bindings</span><div className="flex-1" /><button className="btn btn-ghost btn-sm" disabled={!connected} onClick={async () => { try { setRoute(await gw.req("resolveRoute", { channel: ch, peerId: pid })) } catch { } }}>Resolve Route</button></div>
+        <div className="flex-1 overflow-y-auto p-5">
+          {route && <div className="mb-4 text-sm">Route → <b className="text-primary">{route.agentId}</b> · <span className="font-mono text-xs bg-base-300 px-1.5 py-0.5 rounded">{shortKey(route.sessionKey)}</span></div>}
+          <div className="text-xs font-semibold uppercase tracking-wider opacity-40 mb-3 flex items-center justify-between">Agents <button className="btn btn-primary btn-xs" disabled={!connected} onClick={() => setAddA(true)}><Plus size={10} /> Add</button></div>
+          {addA && <div className="card bg-base-200 border border-primary mb-3"><div className="card-body p-4"><div className="grid grid-cols-2 gap-3">
+            <div className="form-control"><label className="label py-0.5"><span className="label-text text-xs">ID</span></label><input className="input input-bordered input-sm" value={af.id} onChange={e => setAf(s => ({ ...s, id: e.target.value }))} /></div>
+            <div className="form-control"><label className="label py-0.5"><span className="label-text text-xs">Name</span></label><input className="input input-bordered input-sm" value={af.name} onChange={e => setAf(s => ({ ...s, name: e.target.value }))} /></div>
+          </div><div className="form-control mt-2"><label className="label py-0.5"><span className="label-text text-xs">Personality</span></label><textarea className="textarea textarea-bordered textarea-sm" rows={2} value={af.personality} onChange={e => setAf(s => ({ ...s, personality: e.target.value }))} /></div>
+            <div className="flex justify-end gap-1.5 mt-3"><button className="btn btn-ghost btn-xs" onClick={() => setAddA(false)}>Cancel</button><button className="btn btn-primary btn-xs" disabled={!af.id || !af.name} onClick={async () => { try { const c = await gw.req("getConfig"); c.agents = [...(c.agents || []), { id: af.id, name: af.name, personality: af.personality || undefined }]; await gw.req("setConfig", { config: c }); setAddA(false); setAf({ id: "", name: "", personality: "" }); gw.fetchInit() } catch (e) { alert(e.message || e) } }}>Add</button></div></div></div>}
+          {agents.length === 0 ? <div className="opacity-40 mb-5">No agents.</div> : agents.map((a, i) => <div key={i} className="card bg-base-200 border border-base-300 mb-2"><div className="card-body p-3 flex-row items-center justify-between"><div><span className="font-semibold"><Bot size={12} className="inline mr-1 align-middle" />{a.name}</span><div className="text-xs opacity-50">ID: {a.id}</div></div><button className="btn btn-ghost btn-xs text-error" onClick={async () => { if (!confirm("Remove?")) return; try { const c = await gw.req("getConfig"); c.agents = (c.agents || []).filter(x => x.id !== a.id); c.bindings = (c.bindings || []).filter(x => x.agentId !== a.id); await gw.req("setConfig", { config: c }); gw.fetchInit() } catch { } }}><X size={10} /></button></div></div>)}
+          <div className="divider"></div>
+          <div className="text-xs font-semibold uppercase tracking-wider opacity-40 mb-3 flex items-center justify-between">Bindings <button className="btn btn-primary btn-xs" disabled={!connected} onClick={() => setAddB(true)}><Plus size={10} /> Add</button></div>
+          {addB && <div className="card bg-base-200 border border-primary mb-3"><div className="card-body p-4"><div className="grid grid-cols-2 gap-3">
+            <div className="form-control"><label className="label py-0.5"><span className="label-text text-xs">Agent</span></label><select className="select select-bordered select-sm" value={bf.agentId} onChange={e => setBf(s => ({ ...s, agentId: e.target.value }))}><option value="">Select...</option>{agents.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}</select></div>
+            <div className="form-control"><label className="label py-0.5"><span className="label-text text-xs">Tier</span></label><input className="input input-bordered input-sm" type="number" value={bf.tier} onChange={e => setBf(s => ({ ...s, tier: e.target.value }))} /></div>
+            <div className="form-control"><label className="label py-0.5"><span className="label-text text-xs">Match Key</span></label><select className="select select-bordered select-sm" value={bf.matchKey} onChange={e => setBf(s => ({ ...s, matchKey: e.target.value }))}><option value="channel">channel</option><option value="peerId">peerId</option><option value="accountId">accountId</option><option value="*">*</option></select></div>
+            <div className="form-control"><label className="label py-0.5"><span className="label-text text-xs">Match Value</span></label><input className="input input-bordered input-sm" value={bf.matchValue} onChange={e => setBf(s => ({ ...s, matchValue: e.target.value }))} /></div>
+          </div><div className="flex justify-end gap-1.5 mt-3"><button className="btn btn-ghost btn-xs" onClick={() => setAddB(false)}>Cancel</button><button className="btn btn-primary btn-xs" disabled={!bf.agentId} onClick={async () => { try { const c = await gw.req("getConfig"); c.bindings = [...(c.bindings || []), { agentId: bf.agentId, tier: +bf.tier, matchKey: bf.matchKey, matchValue: bf.matchValue, priority: +bf.priority }]; await gw.req("setConfig", { config: c }); setAddB(false); gw.fetchInit() } catch (e) { alert(e.message || e) } }}>Add</button></div></div></div>}
+          {bindings.length === 0 ? <div className="opacity-40">No bindings.</div> : bindings.map((b, i) => <div key={i} className="card bg-base-200 border border-base-300 mb-2"><div className="card-body p-3 flex-row items-center justify-between"><div><span className="font-semibold">{b.agentId}</span><div className="text-xs opacity-50">Tier {b.tier} · <span className="font-mono bg-base-300 px-1 rounded">{b.matchKey}={b.matchValue}</span></div></div><button className="btn btn-ghost btn-xs text-error" onClick={async () => { if (!confirm("Remove?")) return; try { const c = await gw.req("getConfig"); c.bindings.splice(i, 1); await gw.req("setConfig", { config: c }); gw.fetchInit() } catch { } }}><X size={10} /></button></div></div>)}
+        </div>
+      </div>
+    }
+
+    function SkillsPanel() {
+      const skills = useStore(s => s.skills), connected = useStore(s => s.connected), [inv, setInv] = React.useState(""), [args, setArgs] = React.useState({})
+      return <div className="flex-1 flex flex-col overflow-hidden">
+        <div className="navbar bg-base-200 border-b border-base-300 min-h-[46px] px-5"><span className="font-semibold text-lg">Skills</span></div>
+        <div className="flex-1 overflow-y-auto p-5">
+          {skills.length === 0 ? <div className="opacity-40">No skills available.</div> : skills.map((sk, i) => <div key={i} className="card bg-base-200 border border-base-300 mb-3"><div className="card-body p-4">
+            <div className="font-semibold"><Zap size={12} className="inline mr-1 align-middle text-warning" />{sk.name}{sk.userInvocable && <span className="badge badge-xs badge-success ml-1">invocable</span>}</div>
+            <div className="text-sm opacity-60 leading-relaxed">{sk.description}<br />Invocation: <span className="font-mono bg-base-300 px-1 rounded text-xs">{sk.invocation}</span></div>
+            {sk.userInvocable && <div className="flex gap-2 mt-3 flex-wrap items-center">{sk.argumentHint && <input className="input input-bordered input-sm flex-1 min-w-[120px]" placeholder={sk.argumentHint} value={args[sk.name] || ""} onChange={e => setArgs(s => ({ ...s, [sk.name]: e.target.value }))} />}<button className="btn btn-primary btn-xs gap-1" disabled={!connected || inv === sk.name} onClick={async () => { setInv(sk.name); try { const r = await gw.req("invokeSkill", { name: sk.name, arguments: args[sk.name] || undefined }); if (r.content) gw.send(r.content) } catch { } setInv(""); setArgs(s => ({ ...s, [sk.name]: "" })) }}>{inv === sk.name ? <span className="loading loading-spinner loading-xs"></span> : <Play size={10} />} Invoke & Send</button></div>}
+          </div></div>)}
+        </div>
+      </div>
+    }
+
+    function ToolsPanel() {
+      const tools = useStore(s => s.tools)
+      return <div className="flex-1 flex flex-col overflow-hidden">
+        <div className="navbar bg-base-200 border-b border-base-300 min-h-[46px] px-5"><span className="font-semibold text-lg">Tools</span><div className="flex-1" /><span className="text-sm opacity-40">{tools.length} available</span></div>
+        <div className="flex-1 overflow-y-auto p-5">
+          {tools.length === 0 ? <div className="opacity-40">No tools loaded.</div> : tools.map((t, i) => { const fn = t.function || t; return <div key={i} className="card bg-base-200 border border-base-300 mb-2"><div className="card-body p-3"><div className="font-semibold"><Wrench size={12} className="inline mr-1 align-middle text-primary" />{fn.name}</div><div className="text-sm opacity-60">{fn.description}</div>{fn.parameters?.properties && <div className="text-sm opacity-50 mt-1">Params: {Object.keys(fn.parameters.properties).map(p => <span key={p} className="font-mono bg-base-300 px-1 rounded text-xs mr-1">{p}{fn.parameters.required?.includes(p) ? "*" : ""}</span>)}</div>}</div></div> })}
+        </div>
+      </div>
+    }
+
+    function ObservePanel() {
+      const stats = useStore(s => s.stats), ts = useStore(s => s.toolStats), connected = useStore(s => s.connected), pk = useStore(s => s.procKeys)
+      React.useEffect(() => { if (connected) { const iv = setInterval(() => gw.fetchStats(), 5e3); gw.fetchStats(); return () => clearInterval(iv) } }, [connected])
+      return <div className="flex-1 flex flex-col overflow-hidden">
+        <div className="navbar bg-base-200 border-b border-base-300 min-h-[46px] px-5"><span className="font-semibold text-lg">Observability</span><div className="flex-1" /><button className="btn btn-ghost btn-sm gap-1.5" disabled={!connected} onClick={() => gw.fetchStats()}><RefreshCw size={11} /> Refresh</button></div>
+        <div className="flex-1 overflow-y-auto p-5">
+          <div className="text-xs font-semibold uppercase tracking-wider opacity-40 mb-3">System Overview</div>
+          {stats ? <><div className="stats stats-vertical lg:stats-horizontal shadow w-full mb-5">
+            <div className="stat"><div className="stat-title">Uptime</div><div className="stat-value text-xl">{fmtDur(stats.uptime)}</div></div>
+            <div className="stat"><div className="stat-title">Sessions</div><div className="stat-value text-xl">{stats.totalSessions}</div></div>
+            <div className="stat"><div className="stat-title">Active</div><div className="stat-value text-xl" style={stats.activeProcessing > 0 ? { color: "oklch(var(--wa))" } : {}}>{stats.activeProcessing}</div></div>
+            <div className="stat"><div className="stat-title">Messages</div><div className="stat-value text-xl">{stats.totalMessagesReceived}</div></div>
+            <div className="stat"><div className="stat-title">Tool Calls</div><div className="stat-value text-xl">{stats.totalToolCalls}</div></div>
+            <div className="stat"><div className="stat-title">Queue</div><div className="stat-value text-xl">{stats.backgroundQueueSize}</div></div>
+          </div>
+            <div className="text-xs font-semibold uppercase tracking-wider opacity-40 mb-3">Memory</div>
+            <div className="stats stats-vertical lg:stats-horizontal shadow w-full mb-5">
+              <div className="stat"><div className="stat-title">RSS</div><div className="stat-value text-xl">{fmtBytes(stats.memoryUsage?.rss)}</div></div>
+              <div className="stat"><div className="stat-title">Heap Used</div><div className="stat-value text-xl">{fmtBytes(stats.memoryUsage?.heapUsed)}</div></div>
+              <div className="stat"><div className="stat-title">Heap Total</div><div className="stat-value text-xl">{fmtBytes(stats.memoryUsage?.heapTotal)}</div></div>
+            </div></> : <div className="opacity-40 mb-5">No stats available.</div>}
+
+          <div className="text-xs font-semibold uppercase tracking-wider opacity-40 mb-3">Active Processing</div>
+          {Object.keys(pk).length === 0 ? <div className="opacity-40 mb-5">No active processing.</div> : <div className="mb-5">{Object.entries(pk).map(([sk, pid]) => <div key={sk} className="card bg-base-200 border-l-4 border-l-warning mb-2"><div className="card-body p-3 flex-row items-center justify-between"><span className="truncate"><Activity size={12} className="inline mr-1 align-middle text-warning" />{shortKey(sk)}</span><button className="btn btn-error btn-xs gap-1" onClick={() => gw.interrupt(sk)}><CircleStop size={10} /> Interrupt</button></div><div className="text-xs opacity-50 px-3 pb-2">ID: <span className="font-mono bg-base-300 px-1 rounded">{pid}</span></div></div>)}</div>}
+
+          <div className="text-xs font-semibold uppercase tracking-wider opacity-40 mb-3">Tool Performance</div>
+          {ts.length === 0 ? <div className="opacity-40">No tool stats.</div> : <div className="overflow-x-auto"><table className="table table-sm"><thead><tr><th>Tool</th><th className="text-right">Calls</th><th className="text-right">Errors</th><th className="text-right">Avg ms</th></tr></thead><tbody>{ts.sort((a, b) => b.callCount - a.callCount).map((t, i) => <tr key={i}><td className="font-mono text-primary font-semibold">{t.name}</td><td className="text-right">{t.callCount}</td><td className={cx("text-right", t.errorCount > 0 && "text-error")}>{t.errorCount}</td><td className="text-right">{t.avgDurationMs?.toFixed(0) || "-"}</td></tr>)}</tbody></table></div>}
+        </div>
+      </div>
+    }
+
+    function SystemPanel() {
+      const config = useStore(s => s.config), workdir = useStore(s => s.workdir), chs = useStore(s => s.channels), cron = useStore(s => s.cron), connected = useStore(s => s.connected), themeId = useStore(s => s.themeId), sizeId = useStore(s => s.sizeId), ch = useStore(s => s.channel), pid = useStore(s => s.peerId)
+      const [tab, setTab] = React.useState("config"), [edCfg, setEdCfg] = React.useState(false), [cfgTxt, setCfgTxt] = React.useState(""), [cronEd, setCronEd] = React.useState(null)
+      React.useEffect(() => { if (config && edCfg) setCfgTxt(JSON.stringify(config, null, 2)) }, [config, edCfg])
+      const setTheme = id => { useStore.setState({ themeId: id }); applyTheme(id) }
+      const setSize = id => { useStore.setState({ sizeId: id }); applySize(id) }
+      return <div className="flex-1 flex flex-col overflow-hidden">
+        <div className="navbar bg-base-200 border-b border-base-300 min-h-[46px] px-5"><span className="font-semibold text-lg">System</span><div className="flex-1" /><button className="btn btn-ghost btn-sm gap-1.5" disabled={!connected} onClick={() => gw.req("triggerHeartbeat").catch(() => { })}><Zap size={11} /> Heartbeat</button></div>
+        <div className="tabs tabs-boxed bg-base-300 p-0.5 gap-0.5 mx-5 mt-3 w-fit"><button className={cx("tab tab-sm", tab === "config" && "tab-active")} onClick={() => setTab("config")}>Config</button><button className={cx("tab tab-sm", tab === "workdir" && "tab-active")} onClick={() => setTab("workdir")}>Workdir</button><button className={cx("tab tab-sm", tab === "channels" && "tab-active")} onClick={() => setTab("channels")}>Channels</button><button className={cx("tab tab-sm", tab === "cron" && "tab-active")} onClick={() => setTab("cron")}>Cron</button><button className={cx("tab tab-sm", tab === "theme" && "tab-active")} onClick={() => setTab("theme")}>Theme</button></div>
+        <div className="flex-1 overflow-y-auto p-5">
+          {tab === "config" && (!edCfg ? <>{config ? <pre className="bg-base-200 border border-base-300 rounded-lg p-4 text-xs font-mono overflow-x-auto leading-relaxed max-h-[60vh]">{JSON.stringify(config, null, 2)}</pre> : <div className="opacity-40">No config.</div>}<div className="flex justify-end mt-3"><button className="btn btn-primary btn-sm gap-1.5" onClick={() => setEdCfg(true)}><PenLine size={12} /> Edit</button></div></> : <><textarea className="textarea textarea-bordered w-full font-mono text-xs leading-relaxed" value={cfgTxt} onChange={e => setCfgTxt(e.target.value)} rows={20} style={{ minHeight: 300, resize: "vertical" }} /><div className="flex gap-2 mt-3 justify-end"><button className="btn btn-ghost btn-sm" onClick={() => setEdCfg(false)}>Cancel</button><button className="btn btn-primary btn-sm" onClick={async () => { try { await gw.req("setConfig", { config: JSON.parse(cfgTxt) }); setEdCfg(false); gw.fetchInit() } catch (e) { alert("Invalid: " + (e.message || e)) } }}>Save</button></div></>)}
+          {tab === "workdir" && (workdir ? <div className="card bg-base-200 border border-base-300"><div className="card-body p-4">{["workdir", "workspace", "projectWorkspace"].map(k => <div key={k} className="mb-1"><b>{k}:</b> <span className="font-mono bg-base-300 px-1.5 py-0.5 rounded text-xs">{workdir[k]}</span></div>)}</div></div> : <div className="opacity-40">No workdir info.</div>)}
+          {tab === "channels" && <><div className="flex gap-3 mb-4"><div className="form-control flex-1"><label className="label py-0.5"><span className="label-text text-xs">Channel</span></label><input className="input input-bordered input-sm" value={ch} onChange={e => useStore.setState({ channel: e.target.value })} /></div><div className="form-control flex-1"><label className="label py-0.5"><span className="label-text text-xs">Peer ID</span></label><input className="input input-bordered input-sm" value={pid} onChange={e => useStore.setState({ peerId: e.target.value })} /></div></div>{chs.length === 0 ? <div className="opacity-40">No channels.</div> : chs.map((c, i) => <div key={i} className="card bg-base-200 border border-base-300 mb-2"><div className="card-body p-3"><span className="font-semibold">{c.id}</span>{c.ephemeral && <span className="badge badge-xs badge-info">ephemeral</span>}</div></div>)}</>}
+          {tab === "cron" && <><div className="flex justify-end mb-3"><button className="btn btn-primary btn-sm gap-1.5" disabled={!connected} onClick={() => setCronEd({ id: "cron-" + Date.now(), name: "", enabled: true, scheduleKind: "cron", schedule: "0 * * * *", message: "", nextRunAt: 0 })}><Plus size={10} /> Add</button></div>
+            {cronEd && <div className="card bg-base-200 border border-primary mb-3"><div className="card-body p-4"><div className="grid grid-cols-2 gap-3">
+              <div className="form-control"><label className="label py-0.5"><span className="label-text text-xs">ID</span></label><input className="input input-bordered input-sm" value={cronEd.id} onChange={e => setCronEd(s => ({ ...s, id: e.target.value }))} /></div>
+              <div className="form-control"><label className="label py-0.5"><span className="label-text text-xs">Name</span></label><input className="input input-bordered input-sm" value={cronEd.name} onChange={e => setCronEd(s => ({ ...s, name: e.target.value }))} /></div>
+              <div className="form-control"><label className="label py-0.5"><span className="label-text text-xs">Kind</span></label><select className="select select-bordered select-sm" value={cronEd.scheduleKind} onChange={e => setCronEd(s => ({ ...s, scheduleKind: e.target.value }))}><option value="cron">cron</option><option value="at">at</option><option value="every">every</option></select></div>
+              <div className="form-control"><label className="label py-0.5"><span className="label-text text-xs">Schedule</span></label><input className="input input-bordered input-sm" value={cronEd.schedule || ""} onChange={e => setCronEd(s => ({ ...s, schedule: e.target.value }))} /></div>
+            </div><div className="form-control mt-2"><label className="label py-0.5"><span className="label-text text-xs">Message</span></label><input className="input input-bordered input-sm" value={cronEd.message || ""} onChange={e => setCronEd(s => ({ ...s, message: e.target.value }))} /></div>
+              <div className="flex justify-end gap-1.5 mt-3"><button className="btn btn-ghost btn-xs" onClick={() => setCronEd(null)}>Cancel</button><button className="btn btn-primary btn-xs" onClick={async () => { try { const c = await gw.req("getConfig"); c.cronJobs = c.cronJobs || []; const idx = c.cronJobs.findIndex(x => x.id === cronEd.id); if (idx >= 0) c.cronJobs[idx] = cronEd; else c.cronJobs.push(cronEd); await gw.req("setConfig", { config: c }); setCronEd(null); gw.fetchInit() } catch (e) { alert(e.message || e) } }}>Save</button></div></div></div>}
+            {cron.map((cj, i) => <div key={i} className="card bg-base-200 border border-base-300 mb-2"><div className="card-body p-3">
+              <div className="flex justify-between items-center"><span className="font-semibold">{cj.name || cj.id} {cj.enabled ? <span className="badge badge-xs badge-success">on</span> : <span className="badge badge-xs badge-error">off</span>}</span><div className="flex gap-1"><button className="btn btn-ghost btn-xs" onClick={() => setCronEd({ ...cj })}><PenLine size={10} /></button><button className="btn btn-ghost btn-xs text-error" onClick={async () => { try { const c = await gw.req("getConfig"); c.cronJobs = c.cronJobs.filter(x => x.id !== cj.id); await gw.req("setConfig", { config: c }); gw.fetchInit() } catch { } }}><X size={10} /></button></div></div>
+              <div className="text-xs opacity-50">{cj.scheduleKind}: {cj.schedule || "-"} · Next: {cj.nextRunAt ? new Date(cj.nextRunAt).toLocaleString() : "-"}</div>
+              <button className="btn btn-primary btn-xs gap-1 mt-2 w-fit" disabled={!connected} onClick={() => gw.req("triggerCron", { id: cj.id }).catch(() => { })}><Play size={10} /> Trigger</button>
+            </div></div>)}</>}
+          {tab === "theme" && <><div className="text-xs font-semibold uppercase tracking-wider opacity-40 mb-3">Color Theme</div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-6">{DAISY_THEMES.map(t => <button key={t.id} className={cx("card bg-base-200 border p-3 cursor-pointer transition-all hover:scale-[1.02]", themeId === t.id ? "border-primary" : "border-base-300")} onClick={() => setTheme(t.id)}>
+              <div className="flex items-center justify-between mb-1"><span className="font-semibold text-sm">{t.name}</span>{themeId === t.id && <Check size={12} className="text-primary" />}</div>
+              <div className="flex gap-1"><span className="w-4 h-4 rounded" style={{ background: `oklch(var(--b1))`, border: "1px solid oklch(var(--b3))" }} /><span className="w-4 h-4 rounded" style={{ background: "oklch(var(--b2))", border: "1px solid oklch(var(--b3))" }} /><span className="w-4 h-4 rounded" style={{ background: "oklch(var(--p))" }} /></div>
+            </button>)}</div>
+            <div className="text-xs font-semibold uppercase tracking-wider opacity-40 mb-3">Size / Density</div>
+            <div className="grid grid-cols-2 gap-2 mb-6">{SIZE_MODES.map(s => <button key={s.id} className={cx("card bg-base-200 border p-3 cursor-pointer transition-all hover:scale-[1.02]", sizeId === s.id ? "border-primary" : "border-base-300")} onClick={() => setSize(s.id)}>
+              <div className="flex items-center justify-between"><span className="font-semibold text-sm">{s.name}</span>{sizeId === s.id && <Check size={12} className="text-primary" />}</div>
+              <div className="text-xs opacity-40 mt-0.5">Base: {s.id === "compact" ? "12px" : s.id === "default" ? "14px" : s.id === "comfort" ? "16px" : "18px"}</div>
+            </button>)}</div></>}
+        </div>
+      </div>
+    }
+
+    /* ═══════ App ═══════ */
+    function App() {
+      const tab = useStore(s => s.activeTab), connected = useStore(s => s.connected), themeId = useStore(s => s.themeId), sizeId = useStore(s => s.sizeId)
+      React.useEffect(() => { applyTheme(themeId); applySize(sizeId) }, [themeId, sizeId])
+      React.useEffect(() => {
+        const eps = loadEps()
+        if (eps.length > 0) {
+          useStore.setState({ activeEpId: eps[0].id })
+          gw.connect(eps[0].url, eps[0].token).catch(() => { })
+        }
+        return () => gw.disconnect()
+      }, [])
+      React.useEffect(() => {
+        if (!connected) return
+        const iv = setInterval(async () => { try { useStore.setState({ cron: await gw.req("listCronJobs") }) } catch { } }, 3e4)
+        return () => clearInterval(iv)
+      }, [connected])
+      const panels = { chat: ChatPanel, models: ModelsPanel, agents: AgentsPanel, skills: SkillsPanel, tools: ToolsPanel, observe: ObservePanel, system: SystemPanel }
+      const Active = panels[tab] || ChatPanel
+      return <div className="flex h-screen overflow-hidden">
+        <div className="flex flex-col flex-1">
+          <TopBar />
+          <div className="flex flex-1 overflow-hidden">
+            <SideBar />
+            <div className="flex-1 flex overflow-hidden"><Active /></div>
+          </div>
+        </div>
+        <LoginScreen />
+        <AskModal />
+      </div>
+    }
+
+    createRoot(document.getElementById("root")).render(<App />)
+  </script>
+</body>
+
+</html>
