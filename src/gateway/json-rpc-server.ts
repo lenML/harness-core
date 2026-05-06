@@ -161,10 +161,26 @@ export class JsonRpcGatewayServer {
   }
 
   private async handleFileUpload(req: IncomingMessage, res: ServerResponse) {
-    const fileId = `file_${crypto.randomUUID().replace(/-/g, "").slice(0, 12)}`;
+    // 限制总请求体大小 (50 MB)
+    const MAX_FILE_SIZE = 50 * 1024 * 1024;
+    let size = 0;
+    const chunks: Buffer[] = [];
+
+    for await (const chunk of req) {
+      size += chunk.length;
+      if (size > MAX_FILE_SIZE) {
+        res.writeHead(413, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ error: "File too large (max 50 MB)" }));
+        return;
+      }
+      chunks.push(chunk);
+    }
+
+    const buffer = Buffer.concat(chunks);
     const contentType =
       req.headers["content-type"] || "application/octet-stream";
     const ext = contentType.split("/")[1] || "bin";
+    const fileId = `file_${crypto.randomUUID().replace(/-/g, "").slice(0, 12)}`;
     const filename = req.headers["x-filename"]
       ? `${req.headers["x-filename"]}`
       : `${fileId}.${ext}`;
@@ -173,10 +189,8 @@ export class JsonRpcGatewayServer {
     if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
 
     const filePath = path.join(uploadDir, fileId + "." + ext);
-    const writeStream = fs.createWriteStream(filePath);
-
     try {
-      await pipeline(req, writeStream);
+      await fs.promises.writeFile(filePath, buffer);
       const fileUrl = `ws://localhost:${this.port}/uploads/${fileId}.${ext}`;
       res.writeHead(200, { "Content-Type": "application/json" });
       res.end(JSON.stringify({ fileId, url: fileUrl, filename }));

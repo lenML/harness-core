@@ -38,7 +38,7 @@ class WebFetchService {
 
   async fetch(url: string, timeout = 30000): Promise<string> {
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), timeout);
+    let timer: NodeJS.Timeout | null = setTimeout(() => controller.abort(), timeout);
 
     try {
       const resp = await fetch(url, {
@@ -48,6 +48,12 @@ class WebFetchService {
         },
         agent: new ProxyAgent(),
       });
+
+      // 请求成功，清除超时定时器
+      if (timer) {
+        clearTimeout(timer);
+        timer = null;
+      }
 
       if (!resp.ok) {
         return `Error: HTTP ${resp.status} ${resp.statusText}`;
@@ -78,7 +84,7 @@ class WebFetchService {
       }
       return `Error: ${err.message}`;
     } finally {
-      clearTimeout(timer);
+      if (timer) clearTimeout(timer);
     }
   }
 }
