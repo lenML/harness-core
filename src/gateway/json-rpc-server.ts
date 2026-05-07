@@ -81,7 +81,7 @@ export class JsonRpcGatewayServer {
     this.wss.on("connection", (ws, req) => {
       const url = new URL(req.url || "/", `http://localhost:${this.port}`);
       const token = url.searchParams.get("token");
-      if (!token || token !== this.authToken) {
+      if (this.authToken && (!token || token !== this.authToken)) {
         try {
           ws.send(
             JSON.stringify({
@@ -146,7 +146,7 @@ export class JsonRpcGatewayServer {
   private async handleHttpRequest(req: IncomingMessage, res: ServerResponse) {
     const url = new URL(req.url || "/", `http://localhost:${this.port}`);
     const token = url.searchParams.get("token");
-    if (!token || token !== this.authToken) {
+    if (this.authToken && (!token || token !== this.authToken)) {
       res.writeHead(401, { "Content-Type": "application/json" });
       res.end(JSON.stringify({ error: "Unauthorized" }));
       return;

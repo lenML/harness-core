@@ -138,7 +138,7 @@ export class AgentKernel implements CoreContext {
   private processingSessions = new Map<string, SessionProcessingState>();
   private interruptQueues = new Map<string, string[]>();
 
-  readonly authToken: string;
+  public authToken: string = "";
 
   // Observability
   private totalMessagesReceived = 0;
@@ -183,10 +183,12 @@ export class AgentKernel implements CoreContext {
       });
     }
 
-    this.authToken = crypto.randomUUID();
-    console.log(`[Kernel] Generated Auth Token: ${this.authToken}`);
-
     this.installInternalHooks();
+  }
+
+  public setAuth(authToken: string = crypto.randomUUID()) {
+    this.authToken = authToken;
+    console.log(`[Kernel] Generated Auth Token: ${this.authToken}`);
   }
 
   private installInternalHooks() {

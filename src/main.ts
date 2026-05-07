@@ -22,6 +22,10 @@ dotenv.config({ path: path.resolve(process.cwd(), ".env"), override: true });
 async function main() {
   const kernel = new AgentKernel();
 
+  if (process.env.AUTH_ENABLE) {
+    kernel.setAuth(process.env.AUTH_TOKEN || undefined);
+  }
+
   // Core & Routing & Session
   await kernel.use(new CoreAbilitiesPlugin());
   await kernel.use(new RoutingPlugin());
