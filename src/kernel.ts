@@ -533,6 +533,13 @@ export class AgentKernel implements CoreContext {
     const agent = this.agents.get(agentId);
     if (!agent) throw new Error(`Agent ${agentId} not found`);
 
+    // Validate that the session still exists (not deleted) and if ephemeral, ensure it hasn't been destroyed.
+    // This prevents processing messages for sessions that were cleaned up.
+    const existing = await this.sessionStore.load(sessionKey);
+    if (!existing) {
+      throw new Error(`Session ${sessionKey} does not exist or was deleted.`);
+    }
+
     const { channel: skChannel } = parseSessionKey(sessionKey);
     if (this.ephemeralChannels.has(skChannel)) {
       this.sessionStore.markEphemeral(sessionKey);
@@ -593,6 +600,7 @@ export class AgentKernel implements CoreContext {
           );
           await this.emit("llm:after", this, { response });
         } catch (err: any) {
+          console.error(`[Kernel] LLM call error for session ${sessionKey}:`, err);
           if (err.name === "AbortError") {
             if (streamAccumulatedContent) {
               const truncated =

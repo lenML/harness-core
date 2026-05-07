@@ -343,7 +343,14 @@
       }
       onResponse(p) {
         const { processingId: pid, response, error } = p; const lk = this._k(pid, p.sessionKey); if (!lk) return
-        useStore.setState(s => { const sm = { ...s.sMsgs }; const msgs = [...(sm[lk] || EMPTY_ARR)]; const idx = msgs.findIndex(m => m.processingId === pid); if (idx !== -1) { const m = { ...msgs[idx], segments: msgs[idx].segments.map(seg => ({ ...seg, ...(seg.type === "tool_calls" ? { calls: seg.calls.map(c => ({ ...c })) } : {}) })), streaming: false }; if (error) m.error = error; if (response) { const lt = m.segments.filter(x => x.type === "text").pop(); if (lt) lt.content = response } m.segments.forEach(seg => { if (seg.type === "text") seg.streaming = false; if (seg.type === "tool_calls") { seg.calls.forEach(c => c.status = "done"); seg.allDone = true } }); msgs[idx] = m } sm[lk] = msgs; const nk = { ...s.procKeys }; delete nk[lk]; return { sMsgs: sm, procKeys: nk } }); delete this.pmap[pid]
+        useStore.setState(s => { const sm = { ...s.sMsgs }; const msgs = [...(sm[lk] || EMPTY_ARR)]; const idx = msgs.findIndex(m => m.processingId === pid); if (idx !== -1) { const m = { ...msgs[idx], segments: msgs[idx].segments.map(seg => ({ ...seg, ...(seg.type === "tool_calls" ? { calls: seg.calls.map(c => ({ ...c })) } : {}) })), streaming: false }; if (error) {
+            m.error = error;
+            console.error("[WS] Response error:", error);
+          }
+          if (response) { const lt = m.segments.filter(x => x.type === "text").pop(); if (lt) lt.content = response }
+          m.segments.forEach(seg => { if (seg.type === "text") seg.streaming = false; if (seg.type === "tool_calls") { seg.calls.forEach(c => c.status = "done"); seg.allDone = true } });
+          msgs[idx] = m
+        } sm[lk] = msgs; const nk = { ...s.procKeys }; delete nk[lk]; return { sMsgs: sm, procKeys: nk } }); delete this.pmap[pid]
       }
       async fetchInit() {
         const r = await Promise.allSettled([this.req("listModels"), this.req("listAgents"), this.req("listSkills"), this.req("listTools"), this.req("listSessions"), this.req("getConfig"), this.req("getWorkdir"), this.req("listChannels"), this.req("getCurrentModel"), this.req("listCronJobs"), this.req("listBindings"), this.req("system.stats"), this.req("system.toolStats")])
@@ -355,7 +362,22 @@
       async loadHist(sk, limit = 80) { try { const r = await this.req("sessionHistory", { key: sk, limit }); useStore.setState(s => ({ sMsgs: { ...s.sMsgs, [sk]: (r.messages || EMPTY_ARR).filter(e => e.role === "user" || e.role === "assistant").map(env2msg) }, sLoaded: { ...s.sLoaded, [sk]: true } })) } catch { } }
       async send(text) {
         const st = useStore.getState(); let sk = st.activeSK
-        if (!sk) { try { const r = await this.createSess({}); sk = r.sessionKey } catch { return } }
+        if (!sk) {
+          try {
+            const r = await this.createSess({});
+            sk = r.sessionKey;
+          } catch (err) {
+            console.error("Failed to create session:", err);
+            // show error on the newly added user message (if any)
+            const dummyId = "m" + Date.now() + Math.random();
+            useStore.setState(s => {
+              const m = { ...s.sMsgs };
+              m[sk || "dummy"] = [...(m[sk || "dummy"] || EMPTY_ARR), { id: dummyId, role: "user", processingId: null, segments: [{ type: "text", content: text, streaming: false }], streaming: false, interrupted: false, error: "Failed to create session: " + (err.message || err), timestamp: Date.now(), queued: false }];
+              return { sMsgs: m, inputText: "" };
+            });
+            return;
+          }
+        }
         const um = { id: "m" + Date.now() + Math.random(), role: "user", processingId: null, segments: [{ type: "text", content: text, streaming: false }], streaming: false, interrupted: false, error: null, timestamp: Date.now(), queued: false }
         useStore.setState(s => { const m = { ...s.sMsgs }; m[sk] = [...(m[sk] || EMPTY_ARR), um]; return { sMsgs: m, inputText: "" } })
         try {
@@ -363,7 +385,15 @@
           if (res.sessionKey && res.sessionKey !== sk) useStore.setState(s => { const m = { ...s.sMsgs }; m[res.sessionKey] = m[sk] || EMPTY_ARR; delete m[sk]; const nk = { ...s.procKeys }; delete nk[sk]; nk[res.sessionKey] = res.processingId; return { sMsgs: m, activeSK: res.sessionKey, procKeys: nk } })
           else useStore.setState(s => ({ procKeys: { ...s.procKeys, [sk]: res.processingId } }))
           if (res.queued) { const tk = res.sessionKey || sk; useStore.setState(s => { const m = { ...s.sMsgs }; m[tk] = (m[tk] || EMPTY_ARR).map(x => x.id === um.id ? { ...x, queued: true } : x); return { sMsgs: m } }) }
-        } catch (e) { useStore.setState(s => { const m = { ...s.sMsgs }; m[sk] = (m[sk] || EMPTY_ARR).map(x => x.id === um.id ? { ...x, error: String(e.message || e) } : x); return { sMsgs: m } }) }
+        } catch (e) {
+          console.error("Send RPC failed:", e);
+          useStore.setState(s => {
+            const m = { ...s.sMsgs };
+            const arr = m[sk] || EMPTY_ARR;
+            m[sk] = arr.map(x => x.id === um.id ? { ...x, error: "Send failed: " + (e.message || e) } : x);
+            return { sMsgs: m };
+          });
+        }
       }
       async askRespond(qid, ans) { try { await this.req("askUserRespond", { questionId: qid, answer: ans }); useStore.setState(s => ({ askQueue: s.askQueue.filter(q => q.questionId !== qid) })) } catch { } }
       async createSess(p = {}) { const r = await this.req("session.create", p); await this.fetchSessions(); useStore.setState({ activeSK: r.sessionKey }); await this.loadHist(r.sessionKey); if (p.title) try { await this.req("session.updateMetadata", { sessionKey: r.sessionKey, metadata: { title: p.title } }); await this.fetchSessions() } catch { } return r }
@@ -459,7 +489,7 @@
             if (seg.type === "tool_result") return <div key={i} className="text-xs opacity-50 italic">Tool result ({seg.name})</div>
             return null
           })}
-          {msg.error && <div className="text-error text-sm mt-1 flex items-center gap-1"><AlertCircle size={12} />{msg.error}</div>}
+          {msg.error && <div className="text-error text-sm mt-1 flex items-center gap-1 bg-error/10 p-2 rounded-lg"><AlertCircle size={12} />{msg.error}</div>}
           {!msg.streaming && !editing && <div className="flex gap-0.5 mt-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
             {isU && <button className="btn btn-ghost btn-xs" title="Edit" onClick={() => { setEtxt(msg.segments.find(s => s.type === "text")?.content || ""); setEdit(true) }}><PenLine size={12} /></button>}
             <button className="btn btn-ghost btn-xs" title="Fork" onClick={() => gw.forkSess(sk, msg.id)}><GitFork size={12} /></button>

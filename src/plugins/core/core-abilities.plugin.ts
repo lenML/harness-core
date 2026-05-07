@@ -16,9 +16,24 @@ export class CoreAbilitiesPlugin implements AgentPlugin {
     ctx.registerModelProvider({
       async chat(system, messages, tools, signal, onChunk) {
         const config = ctx.getCurrentModelConfig();
+        // Validate config and resolve baseUrl & apiKey with proper defaults
+        let baseUrl = config.baseUrl || process.env.OPENAI_BASE_URL;
+        if (baseUrl === "") baseUrl = undefined;
+        // Ensure baseUrl is a valid HTTP/HTTPS URL if provided; otherwise use undefined (OpenAI default)
+        if (baseUrl && !baseUrl.startsWith('http://') && !baseUrl.startsWith('https://')) {
+          console.warn(`[ModelProvider] Invalid baseUrl "${baseUrl}", falling back to default OpenAI endpoint.`);
+          baseUrl = undefined;
+        }
+        const apiKey = config.apiKey || process.env.OPENAI_API_KEY;
+        if (!apiKey) {
+          throw new Error("Missing API key for model provider. Set OPENAI_API_KEY or configure providers.openai.apiKey.");
+        }
+
+        console.log(`[ModelProvider] Using model: ${config.modelId}, baseUrl: ${baseUrl || '(default OpenAI)'}, apiKey: ${apiKey ? '****' + apiKey.slice(-4) : 'missing'}`);
+
         const openai = new OpenAI({
-          apiKey: config.apiKey || process.env.OPENAI_API_KEY,
-          baseURL: config.baseUrl || process.env.OPENAI_BASE_URL,
+          apiKey: apiKey,
+          baseURL: baseUrl,
         });
 
         const allMessages: any[] = [
@@ -38,6 +53,8 @@ export class CoreAbilitiesPlugin implements AgentPlugin {
         }
 
         // ── 流式请求 ──────────────────────────────
+        // Attach a timeout if not already aborted
+        let timeoutSignal = signal;
         const stream = await openai.chat.completions.create(
           {
             model: config.modelId,
@@ -50,8 +67,22 @@ export class CoreAbilitiesPlugin implements AgentPlugin {
             presence_penalty: config.presencePenalty ?? 0,
             frequency_penalty: config.frequencyPenalty ?? 0,
           },
-          { signal }
+          { signal: timeoutSignal }
         );
+        if (!signal) {
+          const abortCtrl = new AbortController();
+          const timeoutId = setTimeout(() => abortCtrl.abort(), 120000); // 2 minutes
+          signal = abortCtrl.signal;
+          timeoutSignal = abortCtrl.signal;
+          // remove the timeout when done
+          (async () => {
+            try {
+              await stream;
+            } finally {
+              clearTimeout(timeoutId);
+            }
+          })();
+        }
 
         // ── 逐 chunk 累积并回调 ───────────────────
         let content = "";

@@ -254,25 +254,6 @@ export class SessionPlugin implements AgentPlugin {
     ctx.provide("sessions", store);
     ctx.registerSessionStore(store);
 
-    ctx.on("llm:error", async (ctx, { err, messages }) => {
-      const errorMsg = String(err.message).toLowerCase();
-      if (
-        errorMsg.includes("context") ||
-        errorMsg.includes("token") ||
-        errorMsg.includes("length")
-      ) {
-        console.log(
-          "[Session] Context overflow detected, compacting history..."
-        );
-        if (messages.length <= 4) return false;
-        const modelConfig = ctx.getCurrentModelConfig();
-        const compacted = await store.compact(messages, modelConfig);
-        messages.length = 0;
-        messages.push(...compacted);
-        console.log("[Session] Compaction successful. Retrying LLM call.");
-        return true;
-      }
-      return false;
-    });
+    // llm:error handling is delegated to ContextGuardPlugin
   }
 }
