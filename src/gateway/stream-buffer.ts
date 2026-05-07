@@ -142,4 +142,14 @@ export class StreamBuffer {
   hasBuffer(sessionKey: string): boolean {
     return this.buffers.has(sessionKey);
   }
+
+  /**
+   * Get the current buffered content for a session without flushing.
+   * Returns empty string if no buffer exists.
+   */
+  getBufferContent(sessionKey: string): string {
+    const entry = this.buffers.get(sessionKey);
+    if (!entry) return "";
+    return entry.content;
+  }
 }

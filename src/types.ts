@@ -106,6 +106,7 @@ export interface ISessionStore {
   destroyEphemeral(key: string): void;
   isEphemeral(key: string): boolean;
   updateMetadata(key: string, metadata: Record<string, any>): void;
+  hasSession(key: string): boolean;
 }
 
 export interface IPromptBuilder {

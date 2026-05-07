@@ -257,7 +257,14 @@
     const shortKey = k => !k ? "" : k.length <= 30 ? k : "..." + k.slice(-25)
     const sessTitle = s => s.metadata?.title || (s.key?.lastIndexOf(":") !== -1 ? s.key.slice(s.key.lastIndexOf(":") + 1) : shortKey(s.key))
     const sessInit = s => (sessTitle(s).replace(/^[^a-zA-Z0-9]+/, "")[0] || "#").toUpperCase()
-    const env2msg = e => { if (e.role === "tool") return { id: e.id, role: "tool", segments: [{ type: "tool_result", content: e.content, name: e.name, toolCallId: e.toolCallId, streaming: false }], streaming: false, interrupted: false, error: null, timestamp: e.createdAt, queued: false, processingId: null }; const segs = []; if (e.content) segs.push({ type: "text", content: e.content, streaming: false }); if (e.toolCalls?.length) segs.push({ type: "tool_calls", round: 0, calls: e.toolCalls.map((tc, i) => ({ index: i, name: tc.function.name, id: tc.id, arguments: tc.function.arguments, status: "done" })), allDone: true }); return { id: e.id, role: e.role, segments: segs, streaming: false, interrupted: false, error: null, timestamp: e.createdAt, queued: false, processingId: null } }
+    const env2msg = e => { 
+      if (e.role === "tool") return { id: e.id, role: "tool", segments: [{ type: "tool_result", content: e.content, name: e.name, toolCallId: e.toolCallId, streaming: false }], streaming: false, interrupted: false, error: null, timestamp: e.createdAt, queued: false, processingId: null }; 
+      const segs = []; 
+      if (e.content) segs.push({ type: "text", content: e.content, streaming: !!(e.streaming) }); 
+      if (e.toolCalls?.length) segs.push({ type: "tool_calls", round: 0, calls: e.toolCalls.map((tc, i) => ({ index: i, name: tc.function.name, id: tc.id, arguments: tc.function.arguments, status: "done" })), allDone: true }); 
+      const processingId = e.processingId || null;
+      return { id: e.id, role: e.role, segments: segs, streaming: !!e.streaming, interrupted: false, error: null, timestamp: e.createdAt, queued: false, processingId } 
+    }
     const html2vnode = (html, c = document.createElement("div")) => { c.innerHTML = html; return toVNode(c) }
     const useMsgs = sk => useStore(s => s.sMsgs[sk]) ?? EMPTY_ARR
 
@@ -327,8 +334,37 @@
         else if (method === "ask_user") useStore.setState(s => ({ askQueue: [...s.askQueue, p] }))
         else if (method === "session.processing_started") { const sk = this.pmap[p.processingId] || p.sessionKey; if (sk) useStore.setState(s => ({ procKeys: { ...s.procKeys, [sk]: p.processingId } })) }
         else if (method === "session.processing_completed") { const sk = this.pmap[p.processingId] || p.sessionKey; if (sk) useStore.setState(s => { const n = { ...s.procKeys }; delete n[sk]; return { procKeys: n } }); delete this.pmap[p.processingId] }
-        else if (method === "session.created") this.fetchSessions()
-        else if (method === "session.deleted") useStore.setState(s => { const m2 = { ...s.sMsgs }; delete m2[p.sessionKey]; const l = { ...s.sLoaded }; delete l[p.sessionKey]; return { sessions: s.sessions.filter(x => x.key !== p.sessionKey), sMsgs: m2, sLoaded: l, activeSK: s.activeSK === p.sessionKey ? null : s.activeSK } })
+        else if (method === "session.created") {
+          // Optimistically update sessions list without re-fetching
+          const newSess = {
+            key: p.sessionKey,
+            messageCount: 0,
+            ephemeral: false,
+            createdAt: Date.now(),
+            lastActiveAt: Date.now(),
+            metadata: {},
+            ...p,
+          };
+          useStore.setState(s => {
+            const existing = s.sessions.find(x => x.key === p.sessionKey);
+            if (existing) return {};
+            return { sessions: [newSess, ...s.sessions] };
+          });
+        }
+        else if (method === "session.deleted") {
+          useStore.setState(s => {
+            const m2 = { ...s.sMsgs };
+            delete m2[p.sessionKey];
+            const l = { ...s.sLoaded };
+            delete l[p.sessionKey];
+            return {
+              sessions: s.sessions.filter(x => x.key !== p.sessionKey),
+              sMsgs: m2,
+              sLoaded: l,
+              activeSK: s.activeSK === p.sessionKey ? null : s.activeSK
+            };
+          });
+        }
       }
       _k(pid, fb) { return this.pmap[pid] || fb }
       onChunk(p) {
@@ -358,8 +394,40 @@
         const sess = g(4, EMPTY_ARR); useStore.setState({ models: g(0, EMPTY_OBJ), agents: g(1, EMPTY_ARR), skills: g(2, EMPTY_ARR), tools: g(3, EMPTY_ARR), sessions: sess, config: g(5, null), workdir: g(6, null), channels: g(7, EMPTY_ARR), curModel: g(8, null), cron: g(9, EMPTY_ARR), bindings: g(10, EMPTY_ARR), stats: g(11, null), toolStats: g(12, EMPTY_ARR) })
         const st = useStore.getState(); if (!st.activeSK && sess.length > 0) { const sorted = [...sess].sort((a, b) => (b.lastActiveAt || 0) - (a.lastActiveAt || 0)); const sk = sorted[0].key; useStore.setState({ activeSK: sk }); this.loadHist(sk) } else if (sess.length === 0 && st.connected) { try { await this.createSess({}) } catch (e) { console.error("Auto-create session failed:", e) } }
       }
-      async fetchSessions() { try { useStore.setState({ sessions: await this.req("listSessions") }) } catch { } }
-      async loadHist(sk, limit = 80) { try { const r = await this.req("sessionHistory", { key: sk, limit }); useStore.setState(s => ({ sMsgs: { ...s.sMsgs, [sk]: (r.messages || EMPTY_ARR).filter(e => e.role === "user" || e.role === "assistant").map(env2msg) }, sLoaded: { ...s.sLoaded, [sk]: true } })) } catch { } }
+      async fetchSessions() {
+        try {
+          const raw = await this.req("listSessions");
+          // Deduplicate sessions by key (in case backend returns duplicates due to race conditions)
+          const unique = Array.from(new Map(raw.map(s => [s.key, s])).values());
+          useStore.setState({ sessions: unique });
+        } catch { }
+      }
+      async loadHist(sk, limit = 80) { 
+        try { 
+          const r = await this.req("sessionHistory", { key: sk, limit }); 
+          const newMsgs = (r.messages || EMPTY_ARR).filter(e => e.role === "user" || e.role === "assistant").map(env2msg);
+          useStore.setState(s => ({ 
+            sMsgs: { ...s.sMsgs, [sk]: newMsgs }, 
+            sLoaded: { ...s.sLoaded, [sk]: true } 
+          })); 
+          // After setting messages, check if any message has a processingId and we are not already tracking it
+          const streamingMsg = newMsgs.find(m => m.streaming && m.processingId);
+          if (streamingMsg && !useStore.getState().procKeys[sk]) {
+            // Reconnect to this streaming session to continue receiving chunks
+            try {
+              const res = await this.req("reconnectStream", { sessionKey: sk });
+              if (res && res.processingId) {
+                this.pmap[res.processingId] = sk;
+                useStore.setState(s => ({ 
+                  procKeys: { ...s.procKeys, [sk]: res.processingId } 
+                }));
+              }
+            } catch (err) {
+              console.warn("Failed to reconnect stream:", err);
+            }
+          }
+        } catch { } 
+      }
       async send(text) {
         const st = useStore.getState(); let sk = st.activeSK
         if (!sk) {
@@ -396,7 +464,28 @@
         }
       }
       async askRespond(qid, ans) { try { await this.req("askUserRespond", { questionId: qid, answer: ans }); useStore.setState(s => ({ askQueue: s.askQueue.filter(q => q.questionId !== qid) })) } catch { } }
-      async createSess(p = {}) { const r = await this.req("session.create", p); await this.fetchSessions(); useStore.setState({ activeSK: r.sessionKey }); await this.loadHist(r.sessionKey); if (p.title) try { await this.req("session.updateMetadata", { sessionKey: r.sessionKey, metadata: { title: p.title } }); await this.fetchSessions() } catch { } return r }
+      async createSess(p = {}) {
+    // Prevent duplicate creation if this session key already exists in the store
+    const store = useStore.getState();
+    const existingByTitle = p.title ? store.sessions.find(s => s.metadata?.title === p.title) : null;
+    if (existingByTitle) {
+      useStore.setState({ activeSK: existingByTitle.key });
+      await this.loadHist(existingByTitle.key);
+      return { sessionKey: existingByTitle.key, agentId: existingByTitle.agentId };
+    }
+    const r = await this.req("session.create", p);
+    // Optimistically add to sessions list (will be merged by session.created notification)
+    useStore.setState({ activeSK: r.sessionKey });
+    await this.loadHist(r.sessionKey);
+    if (p.title) {
+      try {
+        await this.req("session.updateMetadata", { sessionKey: r.sessionKey, metadata: { title: p.title } });
+      } catch { }
+    }
+    // Refresh full list once to ensure consistency (session.created may have already updated)
+    await this.fetchSessions();
+    return r;
+  }
       async delSess(sk) { try { await this.req("session.delete", { sessionKey: sk }) } catch { }; useStore.setState(s => { const m = { ...s.sMsgs }; delete m[sk]; const l = { ...s.sLoaded }; delete l[sk]; const rem = s.sessions.filter(x => x.key !== sk); return { sessions: rem, sMsgs: m, sLoaded: l, activeSK: s.activeSK === sk ? (rem[0]?.key || null) : s.activeSK } }) }
       async forkSess(sk, mid) { const r = await this.req("session.fork", { sessionKey: sk, messageId: mid }); await this.fetchSessions(); useStore.setState({ activeSK: r.newSessionKey }); await this.loadHist(r.newSessionKey); return r }
       async editMsg(sk, mid, txt) { useStore.setState(s => { const m = { ...s.sMsgs }; const msgs = [...(m[sk] || EMPTY_ARR)]; const i = msgs.findIndex(x => x.id === mid); if (i !== -1) m[sk] = [...msgs.slice(0, i), { ...msgs[i], segments: [{ type: "text", content: txt, streaming: false }], error: null }]; return { sMsgs: m } }); try { const r = await this.req("session.editMessage", { sessionKey: sk, messageId: mid, newText: txt }); this.pmap[r.processingId] = sk; useStore.setState(s => ({ procKeys: { ...s.procKeys, [sk]: r.processingId } })) } catch (e) { alert("Edit failed: " + (e.message || e)); this.loadHist(sk) } }
@@ -410,6 +499,7 @@
     /* ═══════ Snabbdom 流式渲染 ═══════ */
     const SnabText = React.memo(function SnabText({ mid, si, sk }) {
       const ref = React.useRef(null), vref = React.useRef(null), raf = React.useRef(null), ok = React.useRef(true)
+      const forceReRender = React.useState(0)[1]
       const patch = React.useCallback(() => {
         const el = ref.current; if (!el || !ok.current) return
         const st = useStore.getState(); const msgs = st.sMsgs[sk] || EMPTY_ARR; const msg = msgs.find(m => m.id === mid); const seg = msg?.segments?.[si]
@@ -433,7 +523,15 @@
           if (now - lt < min) { if (!raf.current) raf.current = requestAnimationFrame(() => { raf.current = null; lt = performance.now(); patch() }) }
           else { if (raf.current) { cancelAnimationFrame(raf.current); raf.current = null } lt = now; patch() }
         })
-        return () => { ok.current = false; u(); if (raf.current) cancelAnimationFrame(raf.current) }
+        // Also force re-render when streaming flag changes (e.g., after refresh)
+        const iid = setInterval(() => {
+          const st = useStore.getState();
+          const msgs = st.sMsgs[sk] || EMPTY_ARR;
+          const msg = msgs.find(m => m.id === mid);
+          const seg = msg?.segments?.[si];
+          if (seg && seg.streaming) forceReRender(x => x+1);
+        }, 300);
+        return () => { ok.current = false; u(); if (raf.current) cancelAnimationFrame(raf.current); clearInterval(iid) }
       }, [mid, si, sk, patch])
       return React.createElement("div", { ref })
     })

@@ -328,6 +328,29 @@ export class JsonRpcGatewayServer {
         if (beforeIndex >= 0) messages = allMsgs.slice(0, beforeIndex);
         if (limit > 0 && messages.length > limit)
           messages = messages.slice(-limit);
+
+        // Check if session is currently processing and has streaming content
+        const isProcessing = this.ctx.isSessionProcessing(params.key);
+        const streamingContent = this.streamBuffer.getBufferContent(params.key);
+        const processingId = this.processingMap.get(params.key)?.processingId;
+        if (isProcessing && processingId) {
+          // Create a temporary streaming message to be appended
+          const tempStreamingMsg = {
+            id: `streaming_${params.key}_${Date.now()}`,
+            role: "assistant" as const,
+            content: streamingContent || "",
+            createdAt: Date.now(),
+            streaming: true,
+            processingId: processingId, // include processingId for frontend to track
+          };
+          // Avoid duplicate streaming message: if last message is already streaming, replace it
+          if (messages.length > 0 && (messages[messages.length - 1] as any).streaming === true) {
+            messages[messages.length - 1] = tempStreamingMsg as any;
+          } else {
+            messages.push(tempStreamingMsg as any);
+          }
+        }
+
         return {
           sessionKey: params.key,
           messages,
@@ -505,6 +528,21 @@ export class JsonRpcGatewayServer {
         if (params && typeof params === "object")
           this.streamBuffer.updateConfig(params);
         return this.streamBuffer.currentConfig;
+      }
+
+      // Reconnect streaming session after WebSocket reconnection
+      case "reconnectStream": {
+        if (!params.sessionKey) throw new Error("sessionKey is required");
+        const info = this.processingMap.get(params.sessionKey);
+        if (!info) {
+          throw new Error(`Session ${params.sessionKey} is not currently processing.`);
+        }
+        // Update the WebSocket reference to the new connection
+        info.ws = ws;
+        this.processingMap.set(params.sessionKey, info);
+        // Flush any buffered content to the new connection immediately
+        this.streamBuffer.flushBuffer(params.sessionKey);
+        return { processingId: info.processingId, sessionKey: params.sessionKey };
       }
 
       default:

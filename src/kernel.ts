@@ -278,6 +278,10 @@ export class AgentKernel implements CoreContext {
 
   enqueueUserMessage(msg: InboundMessage, targetSessionKey?: string): void {
     const sessionKey = targetSessionKey ?? this.router.resolve(msg).sessionKey;
+    // Ensure session exists before enqueueing (e.g., when session is busy and hasn't been created yet)
+    this.ensureSession(sessionKey).catch((err) =>
+      console.error(`[Kernel] Failed to ensure session ${sessionKey}:`, err)
+    );
     if (!this.interruptQueues.has(sessionKey)) {
       this.interruptQueues.set(sessionKey, []);
     }
@@ -315,7 +319,7 @@ export class AgentKernel implements CoreContext {
     const channel = options.channel || "gateway";
     const peerId =
       options.peerId ||
-      `peer_${crypto.randomUUID().replace(/-/g, "").slice(0, 8)}`;
+      `peer:${crypto.randomUUID().replace(/-/g, "").slice(0, 8)}`;
 
     let agentId = options.agentId;
     if (!agentId) {
@@ -334,6 +338,14 @@ export class AgentKernel implements CoreContext {
     }
 
     const sessionKey = `agent:${agentId}:${channel}:${peerId}`;
+
+    // Ensure session is recorded in store even before any message arrives
+    this.ensureSession(sessionKey, options.ephemeral || false).catch((err) => {
+      console.error(
+        `[Kernel] Failed to ensure newly created session ${sessionKey}:`,
+        err
+      );
+    });
 
     if (options.ephemeral) {
       this.sessionStore.markEphemeral(sessionKey);
@@ -509,11 +521,30 @@ export class AgentKernel implements CoreContext {
 
   // ── Core Processing Loop ─────────────────────────────
 
+  private async ensureSession(
+    sessionKey: string,
+    ephemeral = false
+  ): Promise<void> {
+    if (this.sessionStore.hasSession(sessionKey)) return;
+
+    await this.sessionStore.save(sessionKey, []);
+    if (ephemeral) {
+      this.sessionStore.markEphemeral(sessionKey);
+    } else {
+      // Check channel ephemeral flag from config for this session
+      const { channel } = parseSessionKey(sessionKey);
+      if (this.ephemeralChannels.has(channel)) {
+        this.sessionStore.markEphemeral(sessionKey);
+      }
+    }
+  }
+
   private async processSessionQueue(
     initialMsg: InboundMessage,
     sessionKey: string,
     skipAppendUserMessage = false
   ): Promise<string> {
+    await this.ensureSession(sessionKey);
     const controller = new AbortController();
     const processingId = `core_${Date.now()}_${(
       this.processingSessions.size + 1
@@ -600,7 +631,10 @@ export class AgentKernel implements CoreContext {
           );
           await this.emit("llm:after", this, { response });
         } catch (err: any) {
-          console.error(`[Kernel] LLM call error for session ${sessionKey}:`, err);
+          console.error(
+            `[Kernel] LLM call error for session ${sessionKey}:`,
+            err
+          );
           if (err.name === "AbortError") {
             if (streamAccumulatedContent) {
               const truncated =

@@ -242,6 +242,13 @@ class JsonlSessionStore implements ISessionStore {
     this.saveMetadataFile();
   }
 
+  hasSession(key: string): boolean {
+    if (this.cache.has(key)) return true;
+    if (this.metadataCache.has(key)) return true;
+    const filePath = this.getFilePath(key);
+    return fs.existsSync(filePath);
+  }
+
   private getFilePath(key: string): string {
     return path.join(this.baseDir, `${key.replace(/[:/\\]/g, "_")}.json`);
   }
